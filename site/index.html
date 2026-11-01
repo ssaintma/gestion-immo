@@ -291,6 +291,9 @@
     <section class="card"><h2>Hypothèses</h2>
       <p class="note">Achat et prêt : valeurs réelles (échéancier de la Société Générale au 31/10/2026, intégré à la page). Les autres valeurs sont provisoires jusqu’à confirmation : début et durée du différé du prêt, paramètres d’amortissement, prix visé net vendeur, frais du vendeur.</p>
       <div class="hyp" id="hyp"></div></section>
+    <section class="card"><h2>Amortissement par composant</h2>
+      <p class="note">Reprends le tableau « Immobilisation - Amortissement » de la compta : une ligne par composant (terrain avec une durée de 0), sa valeur d’origine, sa durée en mois et sa date de mise en service. L’amortissement est linéaire, au prorata des jours de la première année. Les frais d’acquisition qui ne figurent pas dans ce tableau ne sont pas immobilisés. Les travaux immobilisés de l’onglet Travaux restent amortis au taux unique.</p>
+      <div class="tablewrap" id="t-composants"></div></section>
   </section>
 </main>
 </div>
@@ -325,7 +328,7 @@
     ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, futur sans année prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
     ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé, net vendeur', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_diagnostics', 'Frais à la charge du vendeur (diagnostics, mainlevée, divers ; l’agence est payée par l’acheteur)', '€']]],
     ['Trésorerie', [['tresorerie_depart', 'Trésorerie de départ à l’achat (apport en plus du prix et des frais)', '€'], ['tresorerie_min', 'Seuil de trésorerie à maintenir', '€'], ['solde_banque', 'Solde bancaire constaté', '€'], ['date_solde', 'Date du solde constaté (vide : estimation seule)', 'date']]],
-    ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
+    ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable (sans composants saisis)', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel (travaux immobilisés, ou sans composants)', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
   ];
   const today = () => new Date().toISOString().slice(0, 10);
   const MOIS_OPTS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, k) => [k + 1, m]);
@@ -356,6 +359,12 @@
       stat: (r) => { const y = Number(S.hyp.date_vente_ref.slice(0, 4)), a = Number(r.annee); return a < y ? 'Sert de base' : a === y ? 'Mois restants' : 'Prévu'; },
       empty: 'Aucune année prévue : le loyer mensuel de base × 12 s’applique à tout le futur.',
     },
+    composants: {
+      cols: [['libelle', 'Composant', 'text'], ['valeur', 'Valeur d’origine (€)', 'number'], ['duree_mois', 'Durée (mois, 0 : terrain)', 'number'], ['debut', 'Mise en service', 'date']],
+      blank: () => ({ libelle: '', valeur: 0, duree_mois: 240, debut: S.hyp.date_achat }), sort: 'debut', add: 'Ajouter un composant', dup: true,
+      empty: 'Aucun composant : l’amortissement est estimé avec le taux unique et la part de terrain ci-dessus.',
+      stat: (r) => (Number(r.duree_mois) > 0 ? EUR.format((Number(r.valeur) || 0) / (Number(r.duree_mois) / 12)) + ' par an' : 'Non amortissable'),
+    },
     depots: {
       cols: [['date', 'Date', 'date'], ['libelle', 'Locataire ou commentaire', 'text'], ['montant', 'Montant (€, négatif : restitution)', 'number']],
       blank: () => ({ date: today(), libelle: '', montant: 0 }), sort: 'date', add: 'Ajouter un dépôt',
@@ -376,7 +385,7 @@
     },
   };
 
-  const S = { hyp: { ...DEFAULT_HYP }, travaux: [], charges: [], loyers: [], projection: [], depots: [], impots: [], versements: [], echeancier: [], canWrite: true, db: null };
+  const S = { hyp: { ...DEFAULT_HYP }, travaux: [], charges: [], loyers: [], projection: [], depots: [], composants: [], impots: [], versements: [], echeancier: [], canWrite: true, db: null };
   const sel = { h: 0, pas: 0, prix: null };
   let R = [];
   let RENT = null;
@@ -472,6 +481,23 @@
     const m = (((Number(c.mois) || 1) - 1) % 12 + 12) % 12, k = i % 12;
     return per === 'annuel' ? (k === m ? a : 0) : (k % 3 === m % 3 ? a / 4 : 0);
   }
+  /* Amortissement linéaire d'un composant, au prorata des jours de chaque année civile (comme le tableau des immobilisations).
+     Cumul du jour de mise en service jusqu'à `fin` inclus (AAAA-MM-JJ) ; durée 0 : terrain, non amortissable. */
+  const joursAn = (y) => (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0) ? 366 : 365);
+  function amortComp(c, fin) {
+    const v = Number(c.valeur) || 0, mois = Number(c.duree_mois) || 0;
+    if (!(v > 0) || !(mois > 0) || !c.debut || fin < c.debut) return 0;
+    const an = v / (mois / 12);
+    let tot = 0;
+    for (let y = ymd(c.debut)[0]; y <= ymd(fin)[0]; y++) {
+      const a = c.debut > `${y}-01-01` ? c.debut : `${y}-01-01`, b = fin < `${y}-12-31` ? fin : `${y}-12-31`;
+      tot += an * ((Date.parse(b) - Date.parse(a)) / 864e5 + 1) / joursAn(y);
+      if (tot >= v) return v;
+    }
+    return tot;
+  }
+  const composantsDe = (h) => S.composants.filter((c) => Number(c.valeur) > 0).map((c) => ({ ...c, valeur: Number(c.valeur), duree_mois: Number(c.duree_mois) || 0, debut: c.debut || h.date_achat }));
+  const amortComps = (comps, fin) => comps.reduce((t, c) => t + amortComp(c, fin), 0);
   function buildMonthly(h) {
     const first = mIdx(h.date_achat), refI = mIdx(h.date_vente_ref), last = (ymd(h.date_vente_ref)[0] + 15) * 12 + 11;
     const n = Math.max(1, last - first + 1);
@@ -503,7 +529,10 @@
     for (const d of S.depots) if (d.date) at(M.D, mIdx(d.date), Number(d.montant) || 0);
     const mo = h.amort_taux_pct / 1200;
     const amortir = (base, from) => { let done = 0; for (let i = Math.max(from, first); i <= last && mo > 0; i++) { const a = Math.min(base * mo, base - done); if (a <= 0) break; done += a; at(M.A, i, a); } };
-    amortir((h.prix_achat + h.frais_notaire + h.frais_agence_achat) * (1 - h.part_terrain_pct / 100), first);
+    const comps = composantsDe(h);
+    if (comps.length) {
+      for (let y = Math.floor(first / 12); y <= Math.floor(last / 12); y++) at(M.A, y * 12 + 11, amortComps(comps, `${y}-12-31`) - amortComps(comps, `${y - 1}-12-31`));
+    } else amortir((h.prix_achat + h.frais_notaire + h.frais_agence_achat) * (1 - h.part_terrain_pct / 100), first);
     for (const t of S.travaux) if (t.date && t.traitement === 'immobilise') amortir(Number(t.montant) || 0, mIdx(t.date));
     return M;
   }
@@ -566,6 +595,8 @@
     const IS = (b) => (b <= 0 ? 0 : (h.is_taux_reduit_pct * Math.min(b, h.is_plafond_reduit) + h.is_taux_normal_pct * Math.max(0, b - h.is_plafond_reduit)) / 100);
     const baseAmort = baseCout * (1 - h.part_terrain_pct / 100);
     const amortAn = baseAmort * h.amort_taux_pct / 100;
+    const comps = composantsDe(h);
+    const capBase = comps.length ? comps.reduce((t, c) => t + c.valeur, 0) : baseCout;
     const moisEntre = (d1, d2) => {
       const [y1, m1, e1] = ymd(d1), [y2, m2, e2] = ymd(d2);
       return Math.max(0, (y2 - y1) * 12 + (m2 - m1) - (e2 < e1 ? 1 : 0));
@@ -607,13 +638,15 @@
         }
         const versCum = ver.filter((v) => v.date <= dv).reduce((t, v) => t + v.montant, 0);
         const apport = apport0 + h.tresorerie_depart + versCum;
-        const capitalise = baseCout + capW;
+        const capitalise = capBase + capW;
         const cout = baseCout + cashW;
-        const amortBien = Math.min(baseAmort, amortAn * mois / 12);
+        const veille = new Date(Date.parse(dv) - 864e5).toISOString().slice(0, 10);
+        const amortBien = comps.length ? amortComps(comps, veille) : Math.min(baseAmort, amortAn * mois / 12);
+        const amortBienAn = comps.length ? amortComps(comps, `${annee}-12-31`) - amortComps(comps, `${annee - 1}-12-31`) : (amortBien < baseAmort ? amortAn : 0);
         const amort = amortBien + amW;
         const vnc = capitalise - amort;
         const pvb = prix - fraisVente - vnc;
-        const courant = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100 - h.assurance_mensuelle * 12 - (amortBien < baseAmort ? amortAn : 0) - amWAn - chargeVente;
+        const courant = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100 - h.assurance_mensuelle * 12 - amortBienAn - amWAn - chargeVente;
         const impotIs = Math.max(0, IS(pvb + courant) - IS(courant));
         const ira = Math.min(crd * h.ira_plafond_pct / 100, crd * h.taux_pret_pct / 100 * h.ira_mois / 12);
         const netSci = prix - fraisVente - crd - ira - impotIs;
@@ -1084,6 +1117,7 @@
     const n = (v) => Number(v) || 0;
     if (name === 'travaux') return [['Réalisés', S.travaux.filter((t) => t.date <= ref).reduce((a, t) => a + n(t.montant), 0)], ['Prévus', S.travaux.filter((t) => t.date > ref).reduce((a, t) => a + n(t.montant), 0)]];
     if (name === 'loyers') return [['Perçus (années saisies)', RENT.years.reduce((a, y) => a + y.saisi, 0)], ['Estimés (années non saisies)', RENT.years.reduce((a, y) => a + y.estime, 0)], ['Total depuis l’achat', RENT.past]];
+    if (name === 'composants') { const cs = composantsDe(S.hyp); return [['Valeur immobilisée', cs.reduce((a, c) => a + c.valeur, 0)], ['Amortissement par an', cs.reduce((a, c) => a + (c.duree_mois > 0 ? c.valeur / (c.duree_mois / 12) : 0), 0)], ['Amortissements cumulés à la référence', amortComps(cs, ref)], ['Valeur nette comptable à la référence', cs.reduce((a, c) => a + c.valeur, 0) - amortComps(cs, ref)]]; }
     if (name === 'depots') return [['Dépôts détenus à la référence', S.depots.filter((d) => d.date && d.date <= ref).reduce((a, d) => a + n(d.montant), 0)]];
     if (name === 'impots') { const ry = Number(ref.slice(0, 4)), ys = ISMODEL ? ISMODEL.years.filter((y) => y.annee < ry) : []; return [['Saisis', ys.filter((y) => y.reel).reduce((a, y) => a + y.is, 0)], ['Estimés (exercices sans saisie)', ys.filter((y) => !y.reel).reduce((a, y) => a + y.is, 0)], ['Total avant la référence', ys.reduce((a, y) => a + y.is, 0)]]; }
     if (name === 'projection') return [['Loyer annuel de l’année de référence', RENT.annualAt(RENT.vy)], ['Loyer annuel un an plus tard', RENT.annualAt(RENT.vy + 1)], ['Loyers des 12 mois suivants', RENT.fwd(0)]];

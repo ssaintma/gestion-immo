@@ -13,7 +13,7 @@ private/            données de départ (ignoré par git, ne pas publier)
 
 ## 1. Créer le projet Supabase
 1. Sur supabase.com : New project, région **Europe** (Paris ou Francfort), mot de passe de base à conserver.
-2. **SQL Editor** : exécute dans l'ordre les fichiers de `supabase/migrations/` (`20261101000000_init.sql`, `20261101000100_projection_annuelle.sql`, `20261101000200_impots.sql`, `20261101000300_depots.sql`, `20261101000400_charges_calendrier.sql`, puis `20261101000500_charges_ponctuelles.sql`).
+2. **SQL Editor** : exécute dans l'ordre les fichiers de `supabase/migrations/` (`20261101000000_init.sql`, `20261101000100_projection_annuelle.sql`, `20261101000200_impots.sql`, `20261101000300_depots.sql`, `20261101000400_charges_calendrier.sql`, `20261101000500_charges_ponctuelles.sql`, puis `20261101000600_composants.sql`).
 3. **SQL Editor** : colle et exécute `private/seed.sql` (hypothèses, charges, échéancier du prêt), puis ajoute les associés :
    ```sql
    insert into public.membres (email, role) values
