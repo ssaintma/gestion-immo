@@ -70,6 +70,7 @@
   .ctl label { display: block; font-weight: 600; margin-bottom: 4px; }
   .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
   .ctl .read { color: var(--muted); font-size: 12px; }
+  .ctl input[type=number] { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 8.5em; text-align: right; }
   .ctl .read b { color: var(--fg); font-weight: 600; }
   .btn { font: inherit; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 12px; cursor: pointer; }
   .btn:hover { border-color: var(--accent); }
@@ -177,9 +178,9 @@
     <div class="card">
       <div class="ctl">
         <div>
-          <label for="r-pas">Prix de vente</label>
+          <label for="r-pas">Prix de vente net vendeur</label>
           <input id="r-pas" type="range" min="-8" max="8" step="1" value="0">
-          <div class="read"><b data-k="prix_vente" data-f="eur">—</b>, soit <b data-k="ecart_pct" data-f="spct">—</b> par rapport au prix visé</div>
+          <div class="read"><input id="r-prix" type="number" inputmode="numeric" min="0" step="1000" aria-label="Prix de vente net vendeur, en euros"> €, soit <b data-k="ecart_pct" data-f="spct">—</b> par rapport au prix visé</div>
         </div>
         <div>
           <label for="r-h">Année de vente</label>
@@ -288,7 +289,7 @@
 
   <section class="view" id="v-hypotheses" data-view="hypotheses" hidden>
     <section class="card"><h2>Hypothèses</h2>
-      <p class="note">Achat et prêt : valeurs réelles (échéancier de la Société Générale au 31/10/2026, intégré à la page). Les autres valeurs sont provisoires jusqu’à confirmation : début et durée du différé du prêt, paramètres d’amortissement, prix visé, frais de vente.</p>
+      <p class="note">Achat et prêt : valeurs réelles (échéancier de la Société Générale au 31/10/2026, intégré à la page). Les autres valeurs sont provisoires jusqu’à confirmation : début et durée du différé du prêt, paramètres d’amortissement, prix visé net vendeur, frais du vendeur.</p>
       <div class="hyp" id="hyp"></div></section>
   </section>
 </main>
@@ -315,14 +316,14 @@
   const DEFAULT_HYP = {
     date_achat: '2020-01-01', prix_achat: 0, frais_notaire: 0, frais_agence_achat: 0,
     emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, pret_premiere_echeance: '', pret_differe_debut: '', pret_differe_mois: 0, pret_differe_mensualite: 0, ira_plafond_pct: 3, ira_mois: 6,
-    loyer_mensuel: 0, indexation_loyer_pct: 0, date_vente_ref: today0(), prix_vente_vise: 0, revalo_annuelle_pct: 1, frais_vente_pct: 4, frais_diagnostics: 0,
+    loyer_mensuel: 0, indexation_loyer_pct: 0, date_vente_ref: today0(), prix_vente_vise: 0, revalo_annuelle_pct: 1, frais_diagnostics: 0,
     part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, pfu_pct: 30, rendement_alternatif_pct: 3, tresorerie_depart: 0, tresorerie_min: 0, solde_banque: 0, date_solde: '',
   };
   const HYP_GROUPS = [
     ['Achat', [['date_achat', 'Date d’achat', 'date'], ['prix_achat', 'Prix d’achat (net vendeur)', '€'], ['frais_notaire', 'Frais d’acte d’achat et de prêt', '€'], ['frais_agence_achat', 'Frais d’agence à l’achat', '€']]],
     ['Prêt', [['emprunt', 'Capital emprunté', '€'], ['taux_pret_pct', 'Taux d’intérêt en cours', '%'], ['assurance_mensuelle', 'Assurance emprunteur par mois', '€'], ['pret_premiere_echeance', 'Première échéance du prêt', 'date'], ['pret_differe_debut', 'Début du différé (intérêts seuls)', 'date'], ['pret_differe_mois', 'Durée du différé', 'mois'], ['pret_differe_mensualite', 'Mensualité pendant le différé (0 : estimée)', '€'], ['ira_plafond_pct', 'Indemnité : plafond en % du capital dû', '%'], ['ira_mois', 'Indemnité : plafond en mois d’intérêts', 'mois']]],
     ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, futur sans année prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
-    ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_vente_pct', 'Frais d’agence à la vente', '%'], ['frais_diagnostics', 'Diagnostics et frais divers', '€']]],
+    ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé, net vendeur', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_diagnostics', 'Frais à la charge du vendeur (diagnostics, mainlevée, divers ; l’agence est payée par l’acheteur)', '€']]],
     ['Trésorerie', [['tresorerie_depart', 'Trésorerie de départ à l’achat (apport en plus du prix et des frais)', '€'], ['tresorerie_min', 'Seuil de trésorerie à maintenir', '€'], ['solde_banque', 'Solde bancaire constaté', '€'], ['date_solde', 'Date du solde constaté (vide : estimation seule)', 'date']]],
     ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
   ];
@@ -376,7 +377,7 @@
   };
 
   const S = { hyp: { ...DEFAULT_HYP }, travaux: [], charges: [], loyers: [], projection: [], depots: [], impots: [], versements: [], echeancier: [], canWrite: true, db: null };
-  const sel = { h: 0, pas: 0 };
+  const sel = { h: 0, pas: 0, prix: null };
   let R = [];
   let RENT = null;
 
@@ -434,7 +435,7 @@
   }
   /* ---------- trésorerie ---------- */
   const selT = { years: 3 };
-  let TRESO = null;
+  let TRESO = null, SCEN = null, PRIX_BASE = null;
   let ISMODEL = null;
   const mIdx = (s) => { const [y, m] = ymd(s); return y * 12 + (m - 1); };
   const nowIdx = () => { const d = new Date(); return d.getFullYear() * 12 + d.getMonth(); };
@@ -576,9 +577,7 @@
     ISMODEL = ISM;
     const cumC = [0];
     for (let k = 0; k < M.n; k++) cumC.push(cumC[k] + M.C[k]);
-    const out = [];
-    for (let hz = 0; hz <= 15; hz++) {
-      for (let pas = -8; pas <= 8; pas++) {
+    const scen = (hz, pas) => {
         const annee = vy + hz;
         const dv = `${annee}-${String(vm).padStart(2, '0')}-${String(vd).padStart(2, '0')}`;
         const mois = moisEntre(h.date_achat, dv);
@@ -586,7 +585,7 @@
         const payes = ECH.filter((e) => e.date <= dv);
         const crd = payes.length ? payes[payes.length - 1].crd : crd0;
         const prix = h.prix_vente_vise * (1 + pas * 0.025) * Math.pow(1 + h.revalo_annuelle_pct / 100, hz);
-        const fraisVente = prix * h.frais_vente_pct / 100 + h.frais_diagnostics;
+        const fraisVente = h.frais_diagnostics;
         let capW = 0, amW = 0, amWAn = 0, cashW = 0, chargeVente = 0;
         for (const t of trav) {
           if (t.date > dv) continue;
@@ -626,7 +625,7 @@
         const net = netSci + tres - impotDistrib;
         const revenuNet = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100;
         const r = Math.round;
-        out.push({
+        return {
           h: hz, pas, annee_vente: annee, ecart_pct: pas * 2.5, duree,
           prix_vente: r(prix), frais_vente: r(fraisVente), cout_capitalise: r(capitalise), amort_cumules: r(amort), vnc: r(vnc), pv_brute: r(pvb),
           resultat_courant: r(courant), impot_is: r(impotIs), net_sci: r(netSci), impot_distrib: r(impotDistrib), impot: r(impotIs + impotDistrib),
@@ -635,12 +634,20 @@
           loyers_cumules: r(loyers), charges_cumulees: r(chargesCum), charges_an: r(chargesAn), mensualites_cumulees: r(mensualites),
           gain_total: r(net - apport),
           revenu_conserver: r(revenuNet + prix * h.revalo_annuelle_pct / 100), revenu_alt: r(net * h.rendement_alternatif_pct / 100),
-        });
-      }
-    }
+        };
+    };
+    const out = [];
+    for (let hz = 0; hz <= 15; hz++) for (let pas = -8; pas <= 8; pas++) out.push(scen(hz, pas));
     R = out;
+    SCEN = scen;
+    PRIX_BASE = (hz) => h.prix_vente_vise * Math.pow(1 + h.revalo_annuelle_pct / 100, hz);
   }
-  const cur = () => R.find((r) => r.h === sel.h && r.pas === sel.pas);
+  const rowFor = (hz) => {
+    const base = PRIX_BASE && PRIX_BASE(hz);
+    if (sel.prix != null && base > 0) return SCEN(hz, (sel.prix / base - 1) / 0.025);
+    return R.find((r) => r.h === hz && r.pas === sel.pas);
+  };
+  const cur = () => rowFor(sel.h);
 
   /* ---------- dom helpers ---------- */
   const $ = (s, el = document) => el.querySelector(s);
@@ -694,7 +701,7 @@
     const { svg, W } = mkSvg(el, H, 'Passage du prix de vente au net en poche');
     let c = r.prix_vente;
     const steps = [{ n: 'Prix de vente', a: 0, b: r.prix_vente, v: r.prix_vente, t: 1 }];
-    for (const [n, d, bad] of [['Frais de vente', -r.frais_vente], ['Prêt à solder', -r.crd], ['Frais de remb. anticipé', -r.ira], ['IS sur plus-value', -r.impot_is, 1], ['Trésorerie de la SCI', r.tresorerie, 2], ['Impôt distribution', -r.impot_distrib, 1]]) {
+    for (const [n, d, bad] of [['Frais du vendeur', -r.frais_vente], ['Prêt à solder', -r.crd], ['Frais de remb. anticipé', -r.ira], ['IS sur plus-value', -r.impot_is, 1], ['Trésorerie de la SCI', r.tresorerie, 2], ['Impôt distribution', -r.impot_distrib, 1]]) {
       steps.push({ n, a: Math.min(c, c + d), b: Math.max(c, c + d), v: d, bad });
       c += d;
     }
@@ -724,11 +731,11 @@
     const { svg, W } = mkSvg(el, H, 'Net en poche et gain total selon le prix de vente');
     const series = [{ key: 'net_vente', name: 'Net en poche', c: 'var(--s1)' }, { key: 'gain_total', name: 'Gain total', c: 'var(--s2)' }];
     const all = pts.flatMap((p) => [p.net_vente, p.gain_total, 0]);
-    const y = d3.scaleLinear([d3.min(all), d3.max(all)], [H - mb, mt]).nice();
+    const y = d3.scaleLinear([d3.min(all), d3.max(all)], [H - mb, mt]).nice().clamp(true);
     const yt = y.ticks(5);
     const ml = measure(svg, yt.map(kE)) + 12;
     const mr = measure(svg, series.map((q) => q.name)) + 14;
-    const x = d3.scaleLinear(d3.extent(pts, (p) => p.prix_vente), [ml, W - mr]);
+    const x = d3.scaleLinear(d3.extent(pts, (p) => p.prix_vente), [ml, W - mr]).clamp(true);
     yt.forEach((t) => {
       svgEl('line', { x1: ml, x2: W - mr, y1: y(t), y2: y(t), stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }, svg);
       tx(svg, { x: ml - 6, y: y(t), 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'tick' }, kE(t));
@@ -749,17 +756,17 @@
       rule.setAttribute('x1', x(p.prix_vente)); rule.setAttribute('x2', x(p.prix_vente));
       series.forEach((q, i) => { dots[i].setAttribute('cx', x(p.prix_vente)); dots[i].setAttribute('cy', y(p[q.key])); });
     };
-    const now = pts.find((p) => p.pas === sel.pas) || pts[0];
+    const now = sel.prix != null ? cur() : (pts.find((p) => p.pas === sel.pas) || pts[0]);
     place(now);
     const tip = mkTip(el);
     const near = (e) => { const p = pt(svg, e, W); const i = Math.max(0, Math.min(pts.length - 1, Math.round((p.x - ml) / (W - mr - ml) * (pts.length - 1)))); return { d: pts[i], p }; };
     svg.addEventListener('pointermove', (e) => { const { d, p } = near(e); place(d); tip.show(`Vente à ${fmt('eur', d.prix_vente)} (${fmt('spct', d.ecart_pct)})`, series.map((q) => ({ c: q.c, k: q.name, v: fmt('eur', d[q.key]) })), p.cx, p.cy); });
     svg.addEventListener('pointerleave', () => { place(now); tip.hide(); });
-    svg.addEventListener('click', (e) => { sel.pas = near(e).d.pas; $('#r-pas').value = sel.pas; renderAnalyse(); });
+    svg.addEventListener('click', (e) => { sel.pas = near(e).d.pas; sel.prix = null; $('#r-pas').value = sel.pas; renderAnalyse(); });
   }
 
   function drawYears(el) {
-    const pts = R.filter((r) => r.pas === sel.pas).sort((a, b) => a.h - b.h);
+    const pts = (sel.prix != null ? d3.range(0, 16).map(rowFor) : R.filter((r) => r.pas === sel.pas)).sort((a, b) => a.h - b.h);
     const H = 300, mt = 14, mb = 30;
     const { svg, W } = mkSvg(el, H, 'Impôts à la vente et gain total selon l’année de vente');
     const all = pts.flatMap((p) => [p.impot, p.gain_total, 0]);
@@ -958,7 +965,7 @@
   }
 
   /* ---------- rendu de l'analyse ---------- */
-  const FISCAL = [['Prix de vente', 'prix_vente'], ['Frais de vente', 'frais_vente'], ['Coût d’acquisition immobilisé (prix, frais, travaux)', 'cout_capitalise'], ['Amortissements cumulés', 'amort_cumules'], ['Valeur nette comptable', 'vnc'], ['Plus-value professionnelle', 'pv_brute', 1], ['Résultat courant de l’année de vente', 'resultat_courant'], ['Impôt sur les sociétés', 'impot_is'], ['Net disponible dans la SCI', 'net_sci', 1], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Impôt sur la distribution (taxe forfaitaire sur le boni)', 'impot_distrib'], ['Net en poche pour les associés', 'net_vente', 1]];
+  const FISCAL = [['Prix de vente', 'prix_vente'], ['Frais à la charge du vendeur', 'frais_vente'], ['Coût d’acquisition immobilisé (prix, frais, travaux)', 'cout_capitalise'], ['Amortissements cumulés', 'amort_cumules'], ['Valeur nette comptable', 'vnc'], ['Plus-value professionnelle', 'pv_brute', 1], ['Résultat courant de l’année de vente', 'resultat_courant'], ['Impôt sur les sociétés', 'impot_is'], ['Net disponible dans la SCI', 'net_sci', 1], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Impôt sur la distribution (taxe forfaitaire sur le boni)', 'impot_distrib'], ['Net en poche pour les associés', 'net_vente', 1]];
   const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Trésorerie de départ (apport en plus)', 'tresorerie_depart'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['IS payé sur les loyers (estimé)', 'is_loyers'], ['Écart avec le solde bancaire constaté', 'ajust_solde'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
   const buildDl = (id, spec) => {
     const dl = $(id);
@@ -977,6 +984,9 @@
     $('#v-sell').hidden = !(r.revenu_alt > r.revenu_conserver);
     $('#v-keep').hidden = r.revenu_alt > r.revenu_conserver;
     $('#al-tres').hidden = !(r.tresorerie < 0);
+    const pr = $('#r-prix');
+    if (document.activeElement !== pr) pr.value = String(Math.round(r.prix_vente));
+    $('#r-pas').value = Math.max(-8, Math.min(8, Math.round(r.ecart_pct / 2.5)));
     return r;
   }
   function renderCharts() {
@@ -1237,9 +1247,11 @@
   buildDl('#dl-fiscal', FISCAL); buildDl('#dl-bilan', BILAN); buildHyp();
   for (const n in TABLES) wireTable(n);
   $$('.tab').forEach((t) => t.addEventListener('click', () => { showView(t.dataset.view); try { history.replaceState(null, '', '#' + t.dataset.view); } catch (e) { /* ignoré */ } }));
-  $('#r-pas').addEventListener('input', (e) => { sel.pas = Number(e.target.value); renderAnalyse(); });
+  $('#r-pas').addEventListener('input', (e) => { sel.pas = Number(e.target.value); sel.prix = null; renderAnalyse(); });
+  $('#r-prix').addEventListener('input', (e) => { const v = Number(e.target.value); if (e.target.value !== '' && v > 0) { sel.prix = v; renderAnalyse(); } });
+  $('#r-prix').addEventListener('blur', (e) => { e.target.value = String(Math.round((cur() || {}).prix_vente || 0)); });
   $('#r-h').addEventListener('input', (e) => { sel.h = Number(e.target.value); renderAnalyse(); });
-  $('#reset').addEventListener('click', () => { sel.h = 0; sel.pas = 0; $('#r-pas').value = 0; $('#r-h').value = 0; renderAnalyse(); });
+  $('#reset').addEventListener('click', () => { sel.h = 0; sel.pas = 0; sel.prix = null; $('#r-pas').value = 0; $('#r-h').value = 0; renderAnalyse(); });
   let rz = 0;
   new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); }); }).observe($('#v-analyse'));
   new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); renderTreso(); }); }).observe($('#v-loyers'));
