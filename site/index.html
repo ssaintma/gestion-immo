@@ -538,16 +538,17 @@
       cum += net;
       months.push({ i, ym: mKey(i), loyers: M.L[k], charges: M.C[k], pret: M.P[k], travaux: M.W[k], is, versements: M.V[k], depots: M.D[k], net, bal: cum, proj: i >= nowI });
     }
+    let off = 0;
     if (h.date_solde) {
       const ai = Math.min(last, Math.max(first, mIdx(h.date_solde)));
-      const off = h.solde_banque - months[ai - first].bal;
+      off = h.solde_banque - months[ai - first].bal;
       for (const m of months) if (m.i >= ai) m.bal += off;
     }
     const seuil = h.tresorerie_min, proj = months.filter((m) => m.proj);
     let low = proj[0] || months[months.length - 1];
     for (const m of proj) if (m.bal < low.bal) low = m;
     const short = proj.find((m) => m.bal < seuil) || null;
-    return { months, first, refI, nowI, last, seuil, cur: months.find((m) => m.i === nowI - 1) || null, low, short, need: Math.max(0, seuil - low.bal), anchored: !!h.date_solde, isYears: ISM.years };
+    return { months, off, first, refI, nowI, last, seuil, cur: months.find((m) => m.i === nowI - 1) || null, low, short, need: Math.max(0, seuil - low.bal), anchored: !!h.date_solde, isYears: ISM.years };
   }
   function compute() {
     const h = {};
@@ -571,6 +572,8 @@
     const L = rentModel(h);
     RENT = L;
     const M = buildMonthly(h), ISM = isModel(h, M);
+    TRESO = computeTreso(h, M, ISM);
+    ISMODEL = ISM;
     const cumC = [0];
     for (let k = 0; k < M.n; k++) cumC.push(cumC[k] + M.C[k]);
     const out = [];
@@ -618,7 +621,7 @@
         const loyers = L.past + L.cum[12 * hz];
         const mensualites = loanPast(h, ECH.map((e) => ({ i: mIdx(e.date), v: e.echeance }))).total + payes.reduce((t, e) => t + e.echeance, 0);
         const isCum = ISM.cum[annee] || 0;
-        const tres = h.tresorerie_depart + versCum + loyers - chargesCum - mensualites - cashW - isCum;
+        const tres = h.tresorerie_depart + versCum + loyers - chargesCum - mensualites - cashW - isCum + TRESO.off;
         const impotDistrib = Math.max(0, netSci + tres - apport) * h.pfu_pct / 100;
         const net = netSci + tres - impotDistrib;
         const revenuNet = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100;
@@ -628,7 +631,7 @@
           prix_vente: r(prix), frais_vente: r(fraisVente), cout_capitalise: r(capitalise), amort_cumules: r(amort), vnc: r(vnc), pv_brute: r(pvb),
           resultat_courant: r(courant), impot_is: r(impotIs), net_sci: r(netSci), impot_distrib: r(impotDistrib), impot: r(impotIs + impotDistrib),
           crd: r(crd), ira: r(ira), net_vente: r(net), tresorerie: r(tres),
-          cout_total: r(cout), apport: r(apport), apport_initial: r(apport0), tresorerie_depart: r(h.tresorerie_depart), versements_cumules: r(versCum), travaux_payes: r(cashW), is_loyers: r(isCum),
+          cout_total: r(cout), apport: r(apport), apport_initial: r(apport0), tresorerie_depart: r(h.tresorerie_depart), versements_cumules: r(versCum), travaux_payes: r(cashW), is_loyers: r(isCum), ajust_solde: r(TRESO.off),
           loyers_cumules: r(loyers), charges_cumulees: r(chargesCum), charges_an: r(chargesAn), mensualites_cumulees: r(mensualites),
           gain_total: r(net - apport),
           revenu_conserver: r(revenuNet + prix * h.revalo_annuelle_pct / 100), revenu_alt: r(net * h.rendement_alternatif_pct / 100),
@@ -636,8 +639,6 @@
       }
     }
     R = out;
-    TRESO = computeTreso(h, M, ISM);
-    ISMODEL = ISM;
   }
   const cur = () => R.find((r) => r.h === sel.h && r.pas === sel.pas);
 
@@ -958,7 +959,7 @@
 
   /* ---------- rendu de l'analyse ---------- */
   const FISCAL = [['Prix de vente', 'prix_vente'], ['Frais de vente', 'frais_vente'], ['Coût d’acquisition immobilisé (prix, frais, travaux)', 'cout_capitalise'], ['Amortissements cumulés', 'amort_cumules'], ['Valeur nette comptable', 'vnc'], ['Plus-value professionnelle', 'pv_brute', 1], ['Résultat courant de l’année de vente', 'resultat_courant'], ['Impôt sur les sociétés', 'impot_is'], ['Net disponible dans la SCI', 'net_sci', 1], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Impôt sur la distribution (taxe forfaitaire sur le boni)', 'impot_distrib'], ['Net en poche pour les associés', 'net_vente', 1]];
-  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Trésorerie de départ (apport en plus)', 'tresorerie_depart'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['IS payé sur les loyers (estimé)', 'is_loyers'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
+  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Trésorerie de départ (apport en plus)', 'tresorerie_depart'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['IS payé sur les loyers (estimé)', 'is_loyers'], ['Écart avec le solde bancaire constaté', 'ajust_solde'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
   const buildDl = (id, spec) => {
     const dl = $(id);
     for (const [lab, k, tot] of spec) {
