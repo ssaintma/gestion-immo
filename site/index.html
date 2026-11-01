@@ -63,9 +63,9 @@
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: 12px; }
   .tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; min-width: 0; }
   .tile.main { background: var(--soft); border-color: transparent; }
-  .tile .l { color: var(--muted); font-size: 12px; }
+  .tile .l { color: var(--muted); font-size: 12px; min-height: 2.9em; }
   .tile .v { display: block; font-family: var(--num); font-size: 26px; line-height: 1.2; margin-top: 2px; overflow-wrap: anywhere; }
-  .tile .s { color: var(--muted); font-size: 12px; }
+  .tile .s { color: var(--muted); font-size: 12px; min-height: 2.9em; }
   .ctl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 16px 28px; align-items: end; }
   .ctl label { display: block; font-weight: 600; margin-bottom: 4px; }
   .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
@@ -96,7 +96,7 @@
   .dl dd { margin: 0; text-align: right; font-weight: 500; }
   .dl .tot { border-top: 1px solid var(--line); padding-top: 6px; color: var(--fg); font-weight: 600; }
   .tablewrap { overflow-x: auto; }
-  table.ed { width: 100%; border-collapse: collapse; min-width: 640px; }
+  table.ed { width: 100%; border-collapse: collapse; min-width: 780px; }
   table.ed th { text-align: left; color: var(--muted); font-size: 12px; font-weight: 500; padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
   table.ed td { padding: 4px 4px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
   table.ed input, table.ed select { font: inherit; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 6px; width: 100%; min-width: 0; }
@@ -104,7 +104,9 @@
   table.ed input:focus, table.ed select:focus { background: var(--panel); border-color: var(--accent); }
   table.ed input[type=number] { text-align: right; }
   table.ed td.stat { font-size: 12px; color: var(--muted); white-space: nowrap; padding-inline: 8px; }
-  table.ed td.act { width: 36px; text-align: center; }
+  table.ed td.act { width: 36px; text-align: center; white-space: nowrap; }
+  .dup { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
+  .dup:hover { color: var(--accent); }
   .del { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 6px; }
   .del:hover { color: var(--bad); }
   .empty { padding: 20px 8px; color: var(--muted); text-align: center; }
@@ -130,6 +132,10 @@
   .auth label { font-weight: 600; }
   .auth input { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
   .auth .note { margin: 0; }
+  .neg { color: var(--bad); }
+  .ctl select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  table.ro td.neg { color: var(--bad); }
+  .tablewrap table.ro { min-width: 640px; }
   .todo { margin: 0; padding-left: 1.2em; line-height: 1.7; }
   @media (prefers-reduced-motion: no-preference) { .cmp-b { transition: width .3s ease; } }
 </style>
@@ -152,6 +158,7 @@
       <button class="tab" role="tab" id="tab-charges" data-view="charges" aria-selected="false">Charges</button>
       <button class="tab" role="tab" id="tab-loyers" data-view="loyers" aria-selected="false">Loyers</button>
       <button class="tab" role="tab" id="tab-versements" data-view="versements" aria-selected="false">Versements</button>
+      <button class="tab" role="tab" id="tab-tresorerie" data-view="tresorerie" aria-selected="false">Trésorerie</button>
       <button class="tab" role="tab" id="tab-hypotheses" data-view="hypotheses" aria-selected="false">Hypothèses</button>
     </nav>
   </div>
@@ -208,7 +215,7 @@
       <p class="alert" id="al-tres" hidden>La trésorerie estimée est négative : il manque des versements dans le tableau, ou des charges et mensualités sont surévaluées.</p></section>
 
     <section class="card"><h2>Ce que le calcul ne couvre pas encore</h2><ul class="todo">
-      <li>IS payé sur les loyers des années passées, déficits reportables, vacance locative et loyers impayés futurs.</li>
+      <li>IS de l’année de vente sur les loyers de cette année-là, vacance locative et loyers impayés futurs. L’IS des années précédentes est estimé, pas lu dans les avis d’imposition.</li>
       <li>Amortissement linéaire unique : la ventilation par composants de la liasse fiscale changera la plus-value.</li>
       <li>Frais de mainlevée d’hypothèque.</li></ul></section>
   </section>
@@ -221,17 +228,23 @@
 
   <section class="view" id="v-charges" data-view="charges" hidden>
     <section class="card"><h2>Charges</h2>
-      <p class="note">Charges annuelles TTC (copropriété, comptable, taxe foncière…). Chaque ligne court de sa date de début à sa date de fin ; sans date de fin, elle continue. Un changement de montant s’écrit en deux lignes.</p>
+      <p class="note">Charges annuelles TTC (copropriété, comptable, taxe foncière…). Chaque ligne court de sa date de début à sa date de fin ; sans date de fin, elle continue. Un paiement « ponctuel » est une dépense unique : le montant est le total payé le mois de la date de début. Un changement de montant s’écrit en deux lignes.</p>
       <div class="tablewrap" id="t-charges"></div></section>
+    <section class="card"><h2>Charges retenues, année par année</h2>
+      <p class="note">Chaque ligne est répartie sur les mois où elle est active, du mois de début au mois de fin inclus : par douzièmes si le paiement est mensuel, par quarts tous les trois mois s’il est trimestriel (à partir du mois indiqué), en une fois dans l’année s’il est annuel, en une seule fois le mois de début s’il est ponctuel. C’est ce détail qui alimente la trésorerie et le résultat. Une année affiche l’année civile entière, même si elle n’est pas terminée. Une dépense unique (frais de mise en place du comptable, régularisation de charges) se saisit avec le paiement « Ponctuel ».</p>
+      <div class="tablewrap" id="t-charges-an"></div></section>
   </section>
 
   <section class="view" id="v-loyers" data-view="loyers" hidden>
     <section class="card"><h2>Loyers perçus, année par année</h2>
-      <p class="note">Total encaissé sur chaque année civile, sans TVA. La dernière année saisie court jusqu’à la date de vente de référence. Une année sans ligne est estimée au loyer mensuel de base (onglet Hypothèses) ; le bouton ci-dessous crée les lignes manquantes pour que tu les ajustes.</p>
+      <p class="note">Total encaissé sur chaque année civile, sans TVA. L’année en cours court jusqu’à aujourd’hui : les mois suivants sont ceux des loyers prévus. Une année sans ligne est estimée au loyer mensuel de base (onglet Hypothèses) ; le bouton ci-dessous crée les lignes manquantes pour que tu les ajustes.</p>
       <div class="tablewrap" id="t-loyers"></div></section>
-    <section class="card"><h2>Loyer mensuel prévu</h2>
-      <p class="note">Évolutions du loyer à partir de la date de référence. Chaque ligne s’applique dès le mois indiqué et jusqu’à la ligne suivante. Une indexation annuelle automatique peut s’ajouter (onglet Hypothèses).</p>
+    <section class="card"><h2>Loyers annuels prévus</h2>
+      <p class="note">Total annuel attendu à partir de l’année de la date de référence (pour cette année-là, seuls les mois restants comptent). Chaque ligne s’applique à son année et aux suivantes, jusqu’à la ligne suivante. Sans ligne, le loyer mensuel de base × 12 s’applique. Une indexation annuelle automatique peut s’ajouter (onglet Hypothèses).</p>
       <div class="tablewrap" id="t-projection"></div></section>
+    <section class="card"><h2>Dépôts de garantie</h2>
+      <p class="note">Cautions versées par les locataires, TTC. Un dépôt reçu augmente le solde bancaire (onglet Trésorerie) mais ce n’est pas un revenu : il ne compte ni dans les loyers ni dans le résultat, et il est à restituer. Il n’entre donc pas dans le calcul de la vente. Saisis une restitution avec un montant négatif.</p>
+      <div class="tablewrap" id="t-depots"></div></section>
     <section class="card"><h2>Loyers année par année</h2>
       <p class="note">Perçus, estimés ou projetés : c’est cette série qui alimente les loyers encaissés, le résultat courant et la comparaison vendre ou conserver.</p>
       <div class="chart" id="c-loyers"></div>
@@ -245,9 +258,37 @@
       <div class="tablewrap" id="t-versements"></div></section>
   </section>
 
+  <section class="view" id="v-tresorerie" data-view="tresorerie" hidden>
+    <div class="card"><div class="ctl">
+      <div><label for="tr-h">Horizon de projection</label>
+        <select id="tr-h"><option value="1">1 an</option><option value="2">2 ans</option><option value="3" selected>3 ans</option><option value="5">5 ans</option></select>
+        <div class="read">à partir du mois en cours</div></div>
+      <button class="btn primary" id="tr-plan" type="button">Planifier le versement nécessaire</button>
+    </div></div>
+    <div class="tiles">
+      <div class="tile main"><div class="l">Solde en début de mois</div><b class="v" id="tr-cur">—</b><div class="s" id="tr-cur-s">fin du mois précédent</div></div>
+      <div class="tile"><div class="l">Point bas projeté</div><b class="v" id="tr-low">—</b><div class="s" id="tr-low-s">—</div></div>
+      <div class="tile"><div class="l">Premier mois sous le seuil</div><b class="v" id="tr-short">—</b><div class="s" id="tr-short-s">seuil à maintenir</div></div>
+      <div class="tile"><div class="l">Versements à prévoir</div><b class="v" id="tr-need">—</b><div class="s">pour rester au-dessus du seuil</div></div>
+    </div>
+    <p class="alert" id="tr-alert" hidden></p>
+    <section class="card"><h2>Trésorerie de la SCI, mois par mois</h2>
+      <p class="note">Solde en fin de mois, local conservé, à partir de la trésorerie de départ (hypothèses). Loyers : saisis ou estimés par année, répartis sur les mois, puis prévus. Charges : selon leur calendrier de paiement (mensuel, trimestriel ou annuel). Prêt : échéancier réel à partir de novembre 2026, mensualités passées reconstituées à partir de la première échéance et du différé de 2020. Les versements, travaux et dépôts de garantie sont placés à leur date. L’impôt sur les sociétés est celui que tu saisis pour chaque exercice, sinon estimé sur le résultat de l’année civile (loyers, charges, intérêts, assurance, amortissements), et payé en mai de l’année suivante, avec des acomptes trimestriels quand l’IS précédent dépasse 3 000 €. Pour caler la courbe sur la banque, renseigne le solde constaté dans les hypothèses.</p>
+      <div class="chart" id="c-treso"></div>
+      <div class="leg"><span><i style="background:var(--s1)"></i>Solde</span><span><i style="background:var(--s3)"></i>Versement</span><span><i style="background:var(--soft);border:1px solid var(--line)"></i>Projeté</span><span><i style="background:var(--bad)"></i>Solde négatif</span></div></section>
+    <section class="card"><h2>IS de chaque exercice</h2>
+      <p class="note">Montant d’impôt sur les sociétés de l’exercice (année civile), tel qu’indiqué sur l’avis ou la liasse. Une année saisie remplace l’estimation, une année vide garde l’estimation, qui sert pour la projection. Le décaissement est placé en mai de l’année suivante.</p>
+      <div class="tablewrap" id="t-impots"></div></section>
+    <section class="card"><h2>Mois à venir</h2>
+      <p class="note">À partir du mois en cours. Les soldes sous le seuil sont en rouge.</p>
+      <div class="tablewrap" id="t-treso"></div></section>
+    <section class="card"><h2>Année par année</h2>
+      <div class="tablewrap" id="t-treso-an"></div></section>
+  </section>
+
   <section class="view" id="v-hypotheses" data-view="hypotheses" hidden>
     <section class="card"><h2>Hypothèses</h2>
-      <p class="note">Achat et prêt : valeurs réelles (échéancier de la Société Générale au 31/10/2026, intégré à la page). Les autres valeurs sont provisoires jusqu’à confirmation : mensualités déjà payées, paramètres d’amortissement, prix visé, frais de vente.</p>
+      <p class="note">Achat et prêt : valeurs réelles (échéancier de la Société Générale au 31/10/2026, intégré à la page). Les autres valeurs sont provisoires jusqu’à confirmation : début et durée du différé du prêt, paramètres d’amortissement, prix visé, frais de vente.</p>
       <div class="hyp" id="hyp"></div></section>
   </section>
 </main>
@@ -273,18 +314,20 @@
   const today0 = () => new Date().toISOString().slice(0, 10);
   const DEFAULT_HYP = {
     date_achat: '2020-01-01', prix_achat: 0, frais_notaire: 0, frais_agence_achat: 0,
-    emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, mensualites_passees: 0, ira_plafond_pct: 3, ira_mois: 6,
+    emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, pret_premiere_echeance: '', pret_differe_debut: '', pret_differe_mois: 0, pret_differe_mensualite: 0, ira_plafond_pct: 3, ira_mois: 6,
     loyer_mensuel: 0, indexation_loyer_pct: 0, date_vente_ref: today0(), prix_vente_vise: 0, revalo_annuelle_pct: 1, frais_vente_pct: 4, frais_diagnostics: 0,
-    part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, pfu_pct: 30, rendement_alternatif_pct: 3,
+    part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, pfu_pct: 30, rendement_alternatif_pct: 3, tresorerie_depart: 0, tresorerie_min: 0, solde_banque: 0, date_solde: '',
   };
   const HYP_GROUPS = [
     ['Achat', [['date_achat', 'Date d’achat', 'date'], ['prix_achat', 'Prix d’achat (net vendeur)', '€'], ['frais_notaire', 'Frais d’acte d’achat et de prêt', '€'], ['frais_agence_achat', 'Frais d’agence à l’achat', '€']]],
-    ['Prêt', [['emprunt', 'Capital emprunté', '€'], ['taux_pret_pct', 'Taux d’intérêt en cours', '%'], ['assurance_mensuelle', 'Assurance emprunteur par mois', '€'], ['mensualites_passees', 'Mensualités déjà payées (estimation)', '€'], ['ira_plafond_pct', 'Indemnité : plafond en % du capital dû', '%'], ['ira_mois', 'Indemnité : plafond en mois d’intérêts', 'mois']]],
-    ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, avant évolution prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
+    ['Prêt', [['emprunt', 'Capital emprunté', '€'], ['taux_pret_pct', 'Taux d’intérêt en cours', '%'], ['assurance_mensuelle', 'Assurance emprunteur par mois', '€'], ['pret_premiere_echeance', 'Première échéance du prêt', 'date'], ['pret_differe_debut', 'Début du différé (intérêts seuls)', 'date'], ['pret_differe_mois', 'Durée du différé', 'mois'], ['pret_differe_mensualite', 'Mensualité pendant le différé (0 : estimée)', '€'], ['ira_plafond_pct', 'Indemnité : plafond en % du capital dû', '%'], ['ira_mois', 'Indemnité : plafond en mois d’intérêts', 'mois']]],
+    ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, futur sans année prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
     ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_vente_pct', 'Frais d’agence à la vente', '%'], ['frais_diagnostics', 'Diagnostics et frais divers', '€']]],
+    ['Trésorerie', [['tresorerie_depart', 'Trésorerie de départ à l’achat (apport en plus du prix et des frais)', '€'], ['tresorerie_min', 'Seuil de trésorerie à maintenir', '€'], ['solde_banque', 'Solde bancaire constaté', '€'], ['date_solde', 'Date du solde constaté (vide : estimation seule)', 'date']]],
     ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
   ];
   const today = () => new Date().toISOString().slice(0, 10);
+  const MOIS_OPTS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, k) => [k + 1, m]);
   const TABLES = {
     travaux: {
       cols: [['date', 'Date', 'date'], ['libelle', 'Travaux', 'text'], ['montant', 'Montant TTC (€)', 'number'], ['traitement', 'Traitement', 'select', [['immobilise', 'Immobilisé'], ['charge', 'Charge']]]],
@@ -293,31 +336,46 @@
       stat: (r) => (r.date > S.hyp.date_vente_ref ? 'Prévu' : 'Réalisé'),
     },
     charges: {
-      cols: [['debut', 'Début', 'date'], ['fin', 'Fin', 'date'], ['libelle', 'Charge', 'text'], ['categorie', 'Catégorie', 'select', [['copro', 'Copropriété'], ['comptable', 'Comptable'], ['taxe_fonciere', 'Taxe foncière'], ['autre', 'Autre']]], ['montant', 'Par an (€)', 'number']],
-      blank: () => ({ debut: S.hyp.date_achat, fin: '', libelle: '', categorie: 'copro', montant: 0 }), sort: 'debut', add: 'Ajouter une charge',
+      cols: [['debut', 'Début', 'date'], ['fin', 'Fin', 'date'], ['libelle', 'Charge', 'text'], ['categorie', 'Catégorie', 'select', [['copro', 'Copropriété'], ['comptable', 'Comptable'], ['taxe_fonciere', 'Taxe foncière'], ['autre', 'Autre']]], ['periodicite', 'Paiement', 'select', [['mensuel', 'Mensuel'], ['trimestriel', 'Trimestriel'], ['annuel', 'Annuel'], ['ponctuel', 'Ponctuel']]], ['mois', 'Mois du paiement', 'select', MOIS_OPTS, true], ['montant', 'Montant (€)', 'number']],
+      off: (r, k) => (k === 'mois' && ['mensuel', 'ponctuel'].includes(r.periodicite || 'mensuel')) || (k === 'fin' && r.periodicite === 'ponctuel'),
+      blank: () => ({ debut: S.hyp.date_achat, fin: '', libelle: '', categorie: 'copro', periodicite: 'mensuel', mois: 1, montant: 0 }), sort: 'debut', add: 'Ajouter une charge', dup: true,
       empty: 'Aucune charge saisie. Ajoute la copropriété, le comptable et la taxe foncière.',
-      stat: (r) => (r.fin && r.fin < S.hyp.date_vente_ref ? 'Terminée' : 'En cours'),
+      stat: (r) => (r.periodicite === 'ponctuel' ? (r.debut && r.debut < S.hyp.date_vente_ref ? 'Payée' : 'À venir') : r.fin && r.fin < S.hyp.date_vente_ref ? 'Terminée' : 'En cours'),
     },
     loyers: {
       cols: [['annee', 'Année', 'number'], ['montant', 'Perçu dans l’année (€)', 'number'], ['libelle', 'Commentaire', 'text']],
       blank: () => ({ annee: Math.max(Number(S.hyp.date_achat.slice(0, 4)) - 1, ...S.loyers.map((l) => Number(l.annee) || 0)) + 1, montant: 0, libelle: '' }), sort: 'annee', add: 'Ajouter une année',
       empty: 'Aucune année saisie : tous les loyers passés sont estimés au loyer mensuel de base.',
-      stat: (r) => { const y = Number(S.hyp.date_vente_ref.slice(0, 4)), a = Number(r.annee); return a > y ? 'Ignoré (projection)' : a === y ? 'Jusqu’à la référence' : a < Number(S.hyp.date_achat.slice(0, 4)) ? 'Avant l’achat' : 'Perçu'; },
-      extra: ['Ajouter les années manquantes', () => { const ys = RENT.years.filter((y) => y.annee <= RENT.vy && !y.exists); for (const y of ys) store.add('loyers', { annee: y.annee, montant: Math.round(y.estime), libelle: 'Estimation à ajuster' }); }],
+      stat: (r) => { const y = RENT ? RENT.cy : Number(S.hyp.date_vente_ref.slice(0, 4)), a = Number(r.annee); return a > y ? 'Ignoré (projection)' : a === y ? 'Jusqu’à aujourd’hui' : a < Number(S.hyp.date_achat.slice(0, 4)) ? 'Avant l’achat' : 'Perçu'; },
+      extra: ['Ajouter les années manquantes', () => { const ys = RENT.years.filter((y) => y.annee <= RENT.cy && !y.exists); for (const y of ys) store.add('loyers', { annee: y.annee, montant: Math.round(y.estime), libelle: 'Estimation à ajuster' }); }],
     },
     projection: {
-      cols: [['debut', 'Dès le mois de', 'date'], ['mensuel', 'Loyer par mois (€)', 'number'], ['libelle', 'Commentaire', 'text']],
-      blank: () => ({ debut: S.hyp.date_vente_ref, mensuel: Math.round(RENT ? RENT.rate[0] : Number(S.hyp.loyer_mensuel) || 0), libelle: '' }), sort: 'debut', add: 'Ajouter une évolution',
-      empty: 'Aucune évolution prévue : le loyer mensuel de base s’applique à tout le futur.',
+      cols: [['annee', 'Dès l’année', 'number'], ['annuel', 'Loyer annuel prévu (€)', 'number'], ['libelle', 'Commentaire', 'text']],
+      blank: () => { const y = Math.max(Number(S.hyp.date_vente_ref.slice(0, 4)), ...S.projection.map((p) => Number(p.annee) || 0)) + 1; return { annee: y, annuel: Math.round(RENT ? RENT.annualAt(y) : 0), libelle: '' }; }, sort: 'annee', add: 'Ajouter une année prévue',
+      stat: (r) => { const y = Number(S.hyp.date_vente_ref.slice(0, 4)), a = Number(r.annee); return a < y ? 'Sert de base' : a === y ? 'Mois restants' : 'Prévu'; },
+      empty: 'Aucune année prévue : le loyer mensuel de base × 12 s’applique à tout le futur.',
+    },
+    depots: {
+      cols: [['date', 'Date', 'date'], ['libelle', 'Locataire ou commentaire', 'text'], ['montant', 'Montant (€, négatif : restitution)', 'number']],
+      blank: () => ({ date: today(), libelle: '', montant: 0 }), sort: 'date', add: 'Ajouter un dépôt',
+      empty: 'Aucun dépôt de garantie saisi.',
+      stat: (r) => (Number(r.montant) < 0 ? 'Restitué' : 'Reçu'),
+    },
+    impots: {
+      cols: [['annee', 'Exercice', 'number'], ['montant', 'IS de l’exercice (€)', 'number'], ['libelle', 'Commentaire', 'text']],
+      blank: () => { const y = Math.max(Number(S.hyp.date_achat.slice(0, 4)) - 1, ...S.impots.map((r) => Number(r.annee) || 0)) + 1, e = ISMODEL && ISMODEL.years.find((q) => q.annee === y); return { annee: y, montant: e ? Math.round(e.estime) : 0, libelle: '' }; }, sort: 'annee', add: 'Ajouter un exercice',
+      stat: (r) => { const e = ISMODEL && ISMODEL.years.find((q) => q.annee === Number(r.annee)); return e ? 'Estimation : ' + EUR.format(e.estime) : ''; },
+      empty: 'Aucun montant saisi : l’IS de toutes les années est estimé.',
+      extra: ['Ajouter les exercices passés', () => { const ref = Number(S.hyp.date_vente_ref.slice(0, 4)); for (const e of ISMODEL.years.filter((q) => q.annee < ref && !q.reel)) store.add('impots', { annee: e.annee, montant: Math.round(e.estime), libelle: 'Estimation à remplacer' }); }],
     },
     versements: {
       cols: [['date', 'Date', 'date'], ['libelle', 'Versement', 'text'], ['nature', 'Nature', 'select', [['compte_courant', 'Compte courant'], ['capital', 'Capital']]], ['montant', 'Montant (€)', 'number']],
-      blank: () => ({ date: today(), libelle: '', nature: 'compte_courant', montant: 0 }), sort: 'date', add: 'Ajouter un versement',
+      blank: () => ({ date: today(), libelle: '', nature: 'compte_courant', montant: 0 }), sort: 'date', add: 'Ajouter un versement', dup: true,
       empty: 'Aucun versement saisi. Ajoute chaque somme injectée dans la SCI.',
     },
   };
 
-  const S = { hyp: { ...DEFAULT_HYP }, travaux: [], charges: [], loyers: [], projection: [], versements: [], echeancier: [], canWrite: true, db: null };
+  const S = { hyp: { ...DEFAULT_HYP }, travaux: [], charges: [], loyers: [], projection: [], depots: [], impots: [], versements: [], echeancier: [], canWrite: true, db: null };
   const sel = { h: 0, pas: 0 };
   let R = [];
   let RENT = null;
@@ -330,7 +388,7 @@
   const kE = (v) => CMP.format(v) + ' €';
   const fmt = (f, v) => {
     if (v == null || Number.isNaN(v)) return '—';
-    if (f === 'eur') return EUR.format(v);
+    if (f === 'eur') return EUR.format(v || 0);
     if (f === 'spct') return (v > 0 ? '+' : '') + fmtPct(v, 1);
     if (f === 'ans') return v + (v > 1 ? ' ans' : ' an');
     if (f === 'date') return new Date(v + 'T00:00:00Z').toLocaleDateString('fr-FR', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' });
@@ -342,29 +400,154 @@
   const NMOIS = 12 * 16 + 12;
   function rentModel(h) {
     const [ay] = ymd(h.date_achat), [vy, vm] = ymd(h.date_vente_ref);
-    const mi = (ym) => { const [y, m] = ymd(ym); return y * 12 + m; };
-    const proj = S.projection.filter((p) => p.debut).map((p) => ({ i: mi(String(p.debut).slice(0, 7)), m: Number(p.mensuel) || 0 })).sort((a, b) => a.i - b.i);
-    const refI = vy * 12 + vm, idx = 1 + h.indexation_loyer_pct / 100;
-    const rateAt = (i) => { let base = h.loyer_mensuel, from = refI; for (const p of proj) if (p.i <= i) { base = p.m; from = p.i; } return base * Math.pow(idx, Math.max(0, Math.floor((i - from) / 12))); };
-    const rate = Array.from({ length: NMOIS }, (_, k) => rateAt(refI + k));
+    const proj = S.projection.filter((p) => Number(p.annee)).map((p) => ({ y: Number(p.annee), a: Number(p.annuel) || 0 })).sort((a, b) => a.y - b.y);
+    const idx = 1 + h.indexation_loyer_pct / 100;
+    const annualAt = (Y) => { let base = h.loyer_mensuel * 12, from = vy; for (const p of proj) if (p.y <= Y) { base = p.a; from = p.y; } return base * Math.pow(idx, Math.max(0, Y - from)); };
+    const yearOf = (k) => vy + Math.floor((vm - 1 + k) / 12);
+    const rate = Array.from({ length: NMOIS }, (_, k) => annualAt(yearOf(k)) / 12);
     const cum = [0]; for (let k = 0; k < NMOIS; k++) cum.push(cum[k] + rate[k]);
-    const sums = new Map(), yearOf = (k) => vy + Math.floor((vm - 1 + k) / 12);
+    const sums = new Map();
     for (const l of S.loyers) { const a = Number(l.annee); if (a) sums.set(a, (sums.get(a) || 0) + (Number(l.montant) || 0)); }
+    /* Loyers saisis ou estimés : mois précédant aujourd'hui (ou la date de référence si elle est antérieure). Ensuite : loyers prévus. */
+    const refI = vy * 12 + vm - 1, cutI = Math.min(refI, nowIdx()), cy = Math.floor((cutI - 1) / 12);
+    const cutDate = `${Math.floor(cutI / 12)}-${String(cutI % 12 + 1).padStart(2, '0')}-01`;
     const monthsIn = (Y) => {
-      const start = h.date_achat > `${Y}-01-01` ? h.date_achat : `${Y}-01-01`, end = h.date_vente_ref < `${Y + 1}-01-01` ? h.date_vente_ref : `${Y + 1}-01-01`;
-      return Math.max(0, (Date.parse(end) - Date.parse(start)) / 864e5) / 30.4375;
+      const a = Date.parse(h.date_achat > `${Y}-01-01` ? h.date_achat : `${Y}-01-01`), b = Date.parse(cutDate < `${Y + 1}-01-01` ? cutDate : `${Y + 1}-01-01`);
+      let t = 0;
+      for (let m = 0; m < 12; m++) { const s0 = Date.UTC(Y, m, 1), e0 = Date.UTC(Y, m + 1, 1), ov = Math.min(b, e0) - Math.max(a, s0); if (ov > 0) t += ov / (e0 - s0); }
+      return t;
     };
+    const lastI = (vy + 15) * 12 + 11;
     const years = []; let past = 0;
     for (let Y = ay; Y <= vy + 15; Y++) {
-      const exists = Y <= vy && sums.has(Y);
+      const exists = Y <= cy && sums.has(Y);
       const saisi = exists ? sums.get(Y) : 0;
-      const estime = Y <= vy && !exists ? h.loyer_mensuel * monthsIn(Y) : 0;
-      let projete = 0, nm = 0;
-      for (let k = 0; k < NMOIS; k++) if (yearOf(k) === Y) { projete += rate[k]; nm++; }
+      const estime = Y <= cy && !exists ? h.loyer_mensuel * monthsIn(Y) : 0;
+      let nm = 0;
+      for (let i = Math.max(cutI, Y * 12); i <= Math.min(lastI, Y * 12 + 11); i++) nm++;
+      const projete = nm * annualAt(Y) / 12;
       past += saisi + estime;
-      years.push({ annee: Y, exists, saisi, estime, projete, total: saisi + estime + projete, mois: Y <= vy ? monthsIn(Y) + nm : nm });
+      years.push({ annee: Y, exists, saisi, estime, projete, total: saisi + estime + projete });
     }
-    return { vy, rate, past, years, cum, fwd: (hz) => cum[12 * hz + 12] - cum[12 * hz] };
+    for (let i = cutI; i < refI; i++) past += annualAt(Math.floor(i / 12)) / 12;
+    return { vy, cy, cutI, rate, annualAt, past, years, cum, fwd: (hz) => cum[12 * hz + 12] - cum[12 * hz] };
+  }
+  /* ---------- trésorerie ---------- */
+  const selT = { years: 3 };
+  let TRESO = null;
+  let ISMODEL = null;
+  const mIdx = (s) => { const [y, m] = ymd(s); return y * 12 + (m - 1); };
+  const nowIdx = () => { const d = new Date(); return d.getFullYear() * 12 + d.getMonth(); };
+  const mKey = (i) => `${Math.floor(i / 12)}-${String(i % 12 + 1).padStart(2, '0')}`;
+  const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  const mLabel = (i) => `${MOIS[i % 12]} ${Math.floor(i / 12)}`;
+  /* Mensualités déjà payées, reconstituées : échéance constante, sauf pendant le différé où seuls les intérêts et l'assurance sont payés. */
+  function loanPast(h, ech) {
+    const map = new Map(), int = new Map(), ins = new Map();
+    let total = 0;
+    if (ech.length && h.pret_premiere_echeance) {
+      const e0 = Math.min(...ech.map((e) => e.i)), normal = ech.find((e) => e.i === e0).v;
+      const dS = h.pret_differe_debut && h.pret_differe_mois > 0 ? mIdx(h.pret_differe_debut) : Infinity, dE = dS + h.pret_differe_mois - 1;
+      const r = h.taux_pret_pct / 1200;
+      const interetsSeuls = h.pret_differe_mensualite > 0 ? h.pret_differe_mensualite : h.emprunt * r + h.assurance_mensuelle;
+      let crd = h.emprunt;
+      for (let i = mIdx(h.pret_premiere_echeance); i < e0; i++) {
+        const interets = crd * r, diff = i >= dS && i <= dE, v = diff ? interetsSeuls : normal, a = diff ? Math.max(0, v - interets) : h.assurance_mensuelle;
+        if (!diff) crd -= v - a - interets;
+        map.set(i, v); int.set(i, interets); ins.set(i, a); total += v;
+      }
+    }
+    return { map, int, ins, total };
+  }
+  const isTax = (h, b) => (b <= 0 ? 0 : (h.is_taux_reduit_pct * Math.min(b, h.is_plafond_reduit) + h.is_taux_normal_pct * Math.max(0, b - h.is_plafond_reduit)) / 100);
+  /* Flux mensuels depuis l'achat jusqu'à décembre de l'année de référence + 15 ans, local conservé. */
+  /* Montant payé au mois i pour une ligne de charges : par douzièmes (mensuel), par quarts tous les 3 mois, ou en une fois dans l'année. */
+  function chargePay(c, i) {
+    const a = Number(c.montant) || 0, per = c.periodicite || 'mensuel';
+    if (!c.debut) return 0;
+    if (per === 'ponctuel') return i === mIdx(c.debut) ? a : 0;
+    if (i < mIdx(c.debut) || (c.fin && i > mIdx(c.fin))) return 0;
+    if (per === 'mensuel') return a / 12;
+    const m = (((Number(c.mois) || 1) - 1) % 12 + 12) % 12, k = i % 12;
+    return per === 'annuel' ? (k === m ? a : 0) : (k % 3 === m % 3 ? a / 4 : 0);
+  }
+  function buildMonthly(h) {
+    const first = mIdx(h.date_achat), refI = mIdx(h.date_vente_ref), last = (ymd(h.date_vente_ref)[0] + 15) * 12 + 11;
+    const n = Math.max(1, last - first + 1);
+    const col = () => new Array(n).fill(0);
+    const M = { first, refI, last, n, L: col(), C: col(), P: col(), W: col(), Wc: col(), V: col(), D: col(), INT: col(), INS: col(), A: col() };
+    const at = (a, i, v) => { if (i >= first && i <= last) a[i - first] += v; };
+    /* Loyers : saisis ou estimés avant aujourd'hui (et avant la date de référence), prévus ensuite. */
+    const cut = RENT.cutI;
+    for (const y of RENT.years) {
+      if (y.annee > RENT.cy) continue;
+      const idx = [];
+      for (let i = Math.max(first, y.annee * 12); i <= Math.min(cut - 1, y.annee * 12 + 11); i++) idx.push(i);
+      for (const i of idx) at(M.L, i, (y.saisi + y.estime) / idx.length);
+    }
+    for (let i = Math.max(cut, first); i <= last; i++) at(M.L, i, RENT.annualAt(Math.floor(i / 12)) / 12);
+    for (const c of S.charges) {
+      if (!c.debut) continue;
+      const ei = c.fin ? mIdx(c.fin) : last;
+      for (let i = Math.max(mIdx(c.debut), first); i <= Math.min(ei, last); i++) at(M.C, i, chargePay(c, i));
+    }
+    const ech = S.echeancier.filter((e) => e.date).map((e) => ({ i: mIdx(e.date), v: Number(e.echeance) || 0, int: Number(e.interets) || 0, ins: Number(e.assurance) || 0 }));
+    const past = loanPast(h, ech);
+    for (const [i, v] of past.map) at(M.P, i, v);
+    for (const [i, v] of past.int) at(M.INT, i, v);
+    for (const [i, v] of past.ins) at(M.INS, i, v);
+    for (const e of ech) { at(M.P, e.i, e.v); at(M.INT, e.i, e.int); at(M.INS, e.i, e.ins); }
+    for (const t of S.travaux) if (t.date) { const m = Number(t.montant) || 0; at(M.W, mIdx(t.date), m); if (t.traitement !== 'immobilise') at(M.Wc, mIdx(t.date), m); }
+    for (const v of S.versements) if (v.date) at(M.V, mIdx(v.date), Number(v.montant) || 0);
+    for (const d of S.depots) if (d.date) at(M.D, mIdx(d.date), Number(d.montant) || 0);
+    const mo = h.amort_taux_pct / 1200;
+    const amortir = (base, from) => { let done = 0; for (let i = Math.max(from, first); i <= last && mo > 0; i++) { const a = Math.min(base * mo, base - done); if (a <= 0) break; done += a; at(M.A, i, a); } };
+    amortir((h.prix_achat + h.frais_notaire + h.frais_agence_achat) * (1 - h.part_terrain_pct / 100), first);
+    for (const t of S.travaux) if (t.date && t.traitement === 'immobilise') amortir(Number(t.montant) || 0, mIdx(t.date));
+    return M;
+  }
+  /* IS estimé par exercice (année civile) : résultat = loyers - charges - intérêts - assurance - amortissements - travaux en charge, déficits reportés.
+     Décaissement : solde en mai de l'année suivante ; acomptes trimestriels l'année suivante si l'IS précédent dépasse 3 000 €. */
+  function isModel(h, M) {
+    const years = [], pay = new Map(), cum = {};
+    const add = (i, v) => pay.set(i, (pay.get(i) || 0) + v);
+    const man = new Map();
+    for (const r of S.impots) { const a = Number(r.annee); if (a) man.set(a, (man.get(a) || 0) + (Number(r.montant) || 0)); }
+    let pool = 0, prev = 0, sum = 0;
+    for (let Y = Math.floor(M.first / 12); Y <= Math.floor(M.last / 12); Y++) {
+      const tot = (a) => { let t = 0; for (let i = Math.max(Y * 12, M.first); i <= Math.min(Y * 12 + 11, M.last); i++) t += a[i - M.first]; return t; };
+      const result = tot(M.L) - tot(M.C) - tot(M.INT) - tot(M.INS) - tot(M.A) - tot(M.Wc);
+      let taxable = 0;
+      if (result < 0) pool -= result; else { const use = Math.min(pool, result); pool -= use; taxable = result - use; }
+      const estime = isTax(h, taxable), reel = man.has(Y), is = reel ? man.get(Y) : estime, q = prev > 3000 ? prev / 4 : 0;
+      for (const m of [2, 5, 8, 11]) add(Y * 12 + m, q);
+      add((Y + 1) * 12 + 4, is - 4 * q);
+      cum[Y] = sum; sum += is; prev = is;
+      years.push({ annee: Y, result, taxable, estime, reel, is });
+    }
+    return { years, pay, cum };
+  }
+  function computeTreso(h, M, ISM) {
+    const { first, refI } = M, nowI = nowIdx(), last = Math.max(first, Math.min(M.last, nowI + 12 * selT.years - 1));
+    const n = last - first + 1;
+    let cum = h.tresorerie_depart;
+    const months = [];
+    for (let k = 0; k < n; k++) {
+      const i = first + k, is = ISM.pay.get(i) || 0;
+      const net = M.L[k] - M.C[k] - M.P[k] - M.W[k] - is + M.V[k] + M.D[k];
+      cum += net;
+      months.push({ i, ym: mKey(i), loyers: M.L[k], charges: M.C[k], pret: M.P[k], travaux: M.W[k], is, versements: M.V[k], depots: M.D[k], net, bal: cum, proj: i >= nowI });
+    }
+    if (h.date_solde) {
+      const ai = Math.min(last, Math.max(first, mIdx(h.date_solde)));
+      const off = h.solde_banque - months[ai - first].bal;
+      for (const m of months) if (m.i >= ai) m.bal += off;
+    }
+    const seuil = h.tresorerie_min, proj = months.filter((m) => m.proj);
+    let low = proj[0] || months[months.length - 1];
+    for (const m of proj) if (m.bal < low.bal) low = m;
+    const short = proj.find((m) => m.bal < seuil) || null;
+    return { months, first, refI, nowI, last, seuil, cur: months.find((m) => m.i === nowI - 1) || null, low, short, need: Math.max(0, seuil - low.bal), anchored: !!h.date_solde, isYears: ISM.years };
   }
   function compute() {
     const h = {};
@@ -387,6 +570,9 @@
     };
     const L = rentModel(h);
     RENT = L;
+    const M = buildMonthly(h), ISM = isModel(h, M);
+    const cumC = [0];
+    for (let k = 0; k < M.n; k++) cumC.push(cumC[k] + M.C[k]);
     const out = [];
     for (let hz = 0; hz <= 15; hz++) {
       for (let pas = -8; pas <= 8; pas++) {
@@ -411,16 +597,14 @@
             }
           } else if (t.date > h.date_vente_ref && ymd(t.date)[0] === annee) chargeVente += t.montant;
         }
-        let chargesCum = 0, chargesAn = 0;
+        let chargesAn = 0;
+        const chargesCum = cumC[Math.max(0, Math.min(M.n, mIdx(dv) - M.first))];
         for (const c of chg) {
           const fin = c.fin || '9999-12-31';
-          const debut = c.debut > h.date_achat ? c.debut : h.date_achat;
-          const finEff = fin < dv ? fin : dv;
-          if (finEff > debut) chargesCum += c.montant * moisEntre(debut, finEff) / 12;
-          if (c.debut <= dv && fin >= dv) chargesAn += c.montant;
+          if (c.periodicite === 'ponctuel') { if (ymd(c.debut)[0] === annee) chargesAn += c.montant; } else if (c.debut <= dv && fin >= dv) chargesAn += c.montant;
         }
         const versCum = ver.filter((v) => v.date <= dv).reduce((t, v) => t + v.montant, 0);
-        const apport = apport0 + versCum;
+        const apport = apport0 + h.tresorerie_depart + versCum;
         const capitalise = baseCout + capW;
         const cout = baseCout + cashW;
         const amortBien = Math.min(baseAmort, amortAn * mois / 12);
@@ -432,8 +616,9 @@
         const ira = Math.min(crd * h.ira_plafond_pct / 100, crd * h.taux_pret_pct / 100 * h.ira_mois / 12);
         const netSci = prix - fraisVente - crd - ira - impotIs;
         const loyers = L.past + L.cum[12 * hz];
-        const mensualites = h.mensualites_passees + payes.reduce((t, e) => t + e.echeance, 0);
-        const tres = versCum + loyers - chargesCum - mensualites - cashW;
+        const mensualites = loanPast(h, ECH.map((e) => ({ i: mIdx(e.date), v: e.echeance }))).total + payes.reduce((t, e) => t + e.echeance, 0);
+        const isCum = ISM.cum[annee] || 0;
+        const tres = h.tresorerie_depart + versCum + loyers - chargesCum - mensualites - cashW - isCum;
         const impotDistrib = Math.max(0, netSci + tres - apport) * h.pfu_pct / 100;
         const net = netSci + tres - impotDistrib;
         const revenuNet = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100;
@@ -443,7 +628,7 @@
           prix_vente: r(prix), frais_vente: r(fraisVente), cout_capitalise: r(capitalise), amort_cumules: r(amort), vnc: r(vnc), pv_brute: r(pvb),
           resultat_courant: r(courant), impot_is: r(impotIs), net_sci: r(netSci), impot_distrib: r(impotDistrib), impot: r(impotIs + impotDistrib),
           crd: r(crd), ira: r(ira), net_vente: r(net), tresorerie: r(tres),
-          cout_total: r(cout), apport: r(apport), apport_initial: r(apport0), versements_cumules: r(versCum), travaux_payes: r(cashW),
+          cout_total: r(cout), apport: r(apport), apport_initial: r(apport0), tresorerie_depart: r(h.tresorerie_depart), versements_cumules: r(versCum), travaux_payes: r(cashW), is_loyers: r(isCum),
           loyers_cumules: r(loyers), charges_cumulees: r(chargesCum), charges_an: r(chargesAn), mensualites_cumulees: r(mensualites),
           gain_total: r(net - apport),
           revenu_conserver: r(revenuNet + prix * h.revalo_annuelle_pct / 100), revenu_alt: r(net * h.rendement_alternatif_pct / 100),
@@ -451,6 +636,8 @@
       }
     }
     R = out;
+    TRESO = computeTreso(h, M, ISM);
+    ISMODEL = ISM;
   }
   const cur = () => R.find((r) => r.h === sel.h && r.pas === sel.pas);
 
@@ -668,22 +855,110 @@
     if ($('#c-loyers').clientWidth) drawLoyers($('#c-loyers'));
     const table = document.createElement('table'); table.className = 'ro';
     const hr = table.createTHead().insertRow();
-    for (const [t, n] of [['Année'], ['Origine'], ['Loyers de l’année', 1], ['Par mois', 1]]) { const th = document.createElement('th'); th.textContent = t; if (n) th.className = 'n'; hr.appendChild(th); }
+    for (const [t, n] of [['Année'], ['Origine'], ['Loyers de l’année', 1]]) { const th = document.createElement('th'); th.textContent = t; if (n) th.className = 'n'; hr.appendChild(th); }
     const tb = table.createTBody();
     for (const d of RENT.years) {
-      const o = d.annee < RENT.vy || (d.annee === RENT.vy && !d.projete) ? (d.exists ? 'Perçu' : 'Estimé') : d.annee === RENT.vy ? (d.exists ? 'Perçu puis projeté' : 'Estimé puis projeté') : 'Projeté';
+      const o = d.annee < RENT.cy || (d.annee === RENT.cy && !d.projete) ? (d.exists ? 'Perçu' : 'Estimé') : d.annee === RENT.cy ? (d.exists ? 'Perçu puis projeté' : 'Estimé puis projeté') : 'Projeté';
       const tr = tb.insertRow();
       tr.insertCell().textContent = String(d.annee);
       tr.insertCell().textContent = o; tr.cells[1].className = 'o';
       const a = tr.insertCell(); a.className = 'n'; a.textContent = EUR.format(d.total);
-      const b = tr.insertCell(); b.className = 'n'; b.textContent = d.mois > 0.5 ? EUR.format(d.total / d.mois) : '—';
     }
     $('#t-recap').replaceChildren(table);
   }
 
+  function drawTreso(el) {
+    const T = TRESO, ms = T.months, H = 300, mt = 18, mb = 28;
+    const { svg, W } = mkSvg(el, H, 'Trésorerie mensuelle de la SCI, passée et projetée');
+    const vals = ms.map((m) => m.bal).concat([0, T.seuil]);
+    const y = d3.scaleLinear([d3.min(vals), d3.max(vals)], [H - mb, mt]).nice();
+    const yt = y.ticks(5);
+    const ml = measure(svg, yt.map(kE)) + 12, mr = 10;
+    const x = d3.scaleLinear([0, Math.max(1, ms.length - 1)], [ml, W - mr]);
+    const ri = ms.findIndex((m) => m.proj);
+    if (ri >= 0) {
+      const x0 = x(Math.max(0, ri - 0.5));
+      const band = fillBar(svgEl('rect', { x: x0, y: mt, width: W - mr - x0, height: H - mb - mt, opacity: 0.6 }, svg), 'var(--soft)');
+      void band;
+      tx(svg, { x: x0 + 6, y: mt + 11, class: 'tick' }, 'Projeté');
+      if (ri > 0) tx(svg, { x: x0 - 6, y: mt + 11, 'text-anchor': 'end', class: 'tick' }, 'Passé');
+    }
+    yt.forEach((t) => {
+      svgEl('line', { x1: ml, x2: W - mr, y1: y(t), y2: y(t), stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }, svg);
+      tx(svg, { x: ml - 6, y: y(t), 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'tick' }, kE(t));
+    });
+    const area = (f, c) => { const a = svgEl('path', { d: d3.area().x((d, k) => x(k)).y0(y(0)).y1((d) => y(f(d.bal)))(ms), opacity: 0.22 }, svg); fillBar(a, c); };
+    area((b) => Math.max(0, b), 'var(--s1)'); area((b) => Math.min(0, b), 'var(--bad)');
+    if (T.seuil !== 0) {
+      svgEl('line', { x1: ml, x2: W - mr, y1: y(T.seuil), y2: y(T.seuil), stroke: 'var(--s2)', 'stroke-dasharray': '4 4' }, svg);
+      tx(svg, { x: W - mr, y: y(T.seuil) - 4, 'text-anchor': 'end', class: 'tick' }, 'Seuil');
+    }
+    const line = svgEl('path', { d: d3.line().x((d, k) => x(k)).y((d) => y(d.bal))(ms), fill: 'none', 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+    line.style.stroke = 'var(--s1)';
+    ms.forEach((m, k) => { if (m.versements > 0) fillBar(svgEl('circle', { cx: x(k), cy: y(m.bal), r: 3.5 }, svg), 'var(--s3)'); });
+    const step = Math.max(1, Math.ceil((measure(svg, ['2026']) + 10) / Math.max(1, x(12) - x(0))));
+    ms.forEach((m, k) => { if (m.i % 12 === 0 && (m.i / 12) % step === 0) tx(svg, { x: x(k), y: H - 8, 'text-anchor': 'middle', class: 'tick' }, String(m.i / 12)); });
+    const tip = mkTip(el), dot = svgEl('circle', { r: 4, hidden: '' }, svg);
+    dot.style.stroke = 'var(--fg)'; dot.style.fill = 'var(--panel)'; dot.style.strokeWidth = 2;
+    const hit = svgEl('rect', { x: ml, y: mt, width: W - mr - ml, height: H - mb - mt, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', (e) => {
+      const p = pt(svg, e, W), k = Math.max(0, Math.min(ms.length - 1, Math.round((p.x - ml) / (W - mr - ml) * (ms.length - 1)))), m = ms[k];
+      dot.removeAttribute('hidden'); dot.setAttribute('cx', x(k)); dot.setAttribute('cy', y(m.bal));
+      tip.show(mLabel(m.i) + (m.proj ? ' (projeté)' : ''), [{ k: 'Solde', v: fmt('eur', m.bal) }, { k: 'Loyers', v: fmt('eur', m.loyers) }, { k: 'Charges', v: fmt('eur', -m.charges) }, { k: 'Prêt', v: fmt('eur', -m.pret) }, { k: 'Travaux', v: fmt('eur', -m.travaux) }, { k: 'IS', v: fmt('eur', -m.is) }, { k: 'Dépôts de garantie', v: fmt('eur', m.depots) }, { k: 'Versements', v: fmt('eur', m.versements) }], p.cx, p.cy);
+    });
+    hit.addEventListener('pointerleave', () => { tip.hide(); dot.setAttribute('hidden', ''); });
+  }
+  function roTable(heads, rows) {
+    const table = document.createElement('table'); table.className = 'ro';
+    const hr = table.createTHead().insertRow();
+    heads.forEach((t, c) => { const th = document.createElement('th'); th.textContent = t; if (c) th.className = 'n'; hr.appendChild(th); });
+    const tb = table.createTBody();
+    for (const r of rows) { const tr = tb.insertRow(); r.forEach(([t, neg], c) => { const td = tr.insertCell(); td.textContent = t; if (c) td.className = 'n' + (neg ? ' neg' : ''); }); }
+    return table;
+  }
+  const CATS = { copro: 'Copropriété', comptable: 'Comptable', taxe_fonciere: 'Taxe foncière', autre: 'Autre' };
+  function renderChargesAn() {
+    if ($('#v-charges').hidden) return;
+    const first = mIdx(S.hyp.date_achat), ay = Math.floor(first / 12), vy = Number(S.hyp.date_vente_ref.slice(0, 4));
+    const ys = []; for (let y = ay; y <= vy + 2; y++) ys.push(y);
+    const lines = S.charges.filter((c) => c.debut).sort((a, b) => (a.debut < b.debut ? -1 : 1)).map((c) => {
+      const a = Number(c.montant) || 0, si = mIdx(c.debut), ei = c.fin ? mIdx(c.fin) : Infinity;
+      const per = { trimestriel: ', trimestriel', annuel: ', payé en ' + (MOIS_OPTS[(((Number(c.mois) || 1) - 1) % 12 + 12) % 12][1].toLowerCase()) }[c.periodicite] || '';
+      const when = c.periodicite === 'ponctuel' ? `${mLabel(si)}, ponctuel : ${EUR.format(a)}` : `${mLabel(si)} → ${c.fin ? mLabel(ei) : 'en cours'}, ${EUR.format(a)} par an${per}`;
+      return { lab: `${CATS[c.categorie] || 'Charge'} · ${c.libelle || 'sans libellé'} (${when})`, vals: ys.map((y) => { let t = 0; for (let i = Math.max(y * 12, si, first); i <= Math.min(y * 12 + 11, ei); i++) t += chargePay(c, i); return t; }) };
+    });
+    if (!lines.length) { $('#t-charges-an').replaceChildren(); return; }
+    const money = (v) => [v ? EUR.format(v) : '—'];
+    const rows = lines.map((l) => [[l.lab], ...l.vals.map(money)]);
+    rows.push([['Total'], ...ys.map((y, k) => [EUR.format(lines.reduce((t, l) => t + l.vals[k], 0))])]);
+    $('#t-charges-an').replaceChildren(roTable(['Charge', ...ys.map(String)], rows));
+  }
+  function renderTreso() {
+    if (!TRESO || $('#v-tresorerie').hidden) return;
+    const T = TRESO, cur = T.cur ? T.cur.bal : 0;
+    const set = (id, txt, bad) => { const e = $(id); e.textContent = txt; e.classList.toggle('neg', !!bad); };
+    set('#tr-cur', EUR.format(cur), cur < T.seuil);
+    const dep = T.months.filter((m) => m.i < T.nowI).reduce((a, m) => a + m.depots, 0);
+    $('#tr-cur-s').textContent = 'fin du mois précédent' + (dep ? ` · dont ${EUR.format(dep)} de dépôts de garantie à restituer` : '');
+    set('#tr-low', EUR.format(T.low.bal), T.low.bal < T.seuil); $('#tr-low-s').textContent = mLabel(T.low.i);
+    set('#tr-short', T.short ? mLabel(T.short.i) : 'Aucun', !!T.short); $('#tr-short-s').textContent = 'seuil : ' + EUR.format(T.seuil);
+    set('#tr-need', EUR.format(T.need), T.need > 0);
+    $('#tr-plan').disabled = !(T.need > 0 && S.canWrite);
+    const al = $('#tr-alert');
+    al.hidden = !(T.need > 0);
+    if (T.need > 0) al.textContent = `La trésorerie passe sous le seuil en ${mLabel(T.short.i)}. Un versement d’environ ${EUR.format(Math.ceil(T.need / 100) * 100)} à cette date la maintient au-dessus jusqu’à la fin de l’horizon.`;
+    if ($('#c-treso').clientWidth) drawTreso($('#c-treso'));
+    const e = (v, neg) => [EUR.format(v || 0), neg];
+    const rows = T.months.filter((m) => m.proj).map((m) => [[mLabel(m.i)], e(m.loyers), e(-m.charges), e(-m.pret), e(-m.travaux), e(-m.is), e(m.depots), e(m.versements), e(m.bal, m.bal < T.seuil)]);
+    $('#t-treso').replaceChildren(roTable(['Mois', 'Loyers', 'Charges', 'Prêt', 'Travaux', 'IS', 'Dépôts', 'Versements', 'Solde fin de mois'], rows));
+    const by = new Map();
+    for (const m of T.months) { const y = Math.floor(m.i / 12); const a = by.get(y) || { loyers: 0, charges: 0, pret: 0, travaux: 0, is: 0, depots: 0, versements: 0, bal: 0 }; for (const k of ['loyers', 'charges', 'pret', 'travaux', 'is', 'depots', 'versements']) a[k] += m[k]; a.bal = m.bal; by.set(y, a); }
+    $('#t-treso-an').replaceChildren(roTable(['Année', 'Loyers', 'Charges', 'Prêt', 'Travaux', 'IS', 'Dépôts', 'Versements', 'Solde fin d’année'], [...by].map(([y, a]) => [[String(y)], e(a.loyers), e(-a.charges), e(-a.pret), e(-a.travaux), e(-a.is), e(a.depots), e(a.versements), e(a.bal, a.bal < T.seuil)])));
+  }
+
   /* ---------- rendu de l'analyse ---------- */
   const FISCAL = [['Prix de vente', 'prix_vente'], ['Frais de vente', 'frais_vente'], ['Coût d’acquisition immobilisé (prix, frais, travaux)', 'cout_capitalise'], ['Amortissements cumulés', 'amort_cumules'], ['Valeur nette comptable', 'vnc'], ['Plus-value professionnelle', 'pv_brute', 1], ['Résultat courant de l’année de vente', 'resultat_courant'], ['Impôt sur les sociétés', 'impot_is'], ['Net disponible dans la SCI', 'net_sci', 1], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Impôt sur la distribution (taxe forfaitaire sur le boni)', 'impot_distrib'], ['Net en poche pour les associés', 'net_vente', 1]];
-  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
+  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Trésorerie de départ (apport en plus)', 'tresorerie_depart'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['IS payé sur les loyers (estimé)', 'is_loyers'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
   const buildDl = (id, spec) => {
     const dl = $(id);
     for (const [lab, k, tot] of spec) {
@@ -696,7 +971,7 @@
 
   function renderValues() {
     const r = cur();
-    $$('[data-k]').forEach((e) => { e.textContent = r ? fmt(e.dataset.f, r[e.dataset.k]) : '—'; });
+    $$('.top [data-k], #v-analyse [data-k]').forEach((e) => { e.textContent = r ? fmt(e.dataset.f, r[e.dataset.k]) : '—'; });
     if (!r) return null;
     $('#v-sell').hidden = !(r.revenu_alt > r.revenu_conserver);
     $('#v-keep').hidden = r.revenu_alt > r.revenu_conserver;
@@ -769,16 +1044,17 @@
           inp = document.createElement('select');
           for (const [v, l] of opts) inp.add(new Option(l, v));
         } else { inp = document.createElement('input'); inp.type = type; if (type === 'number') inp.step = 'any'; if (type === 'text') inp.placeholder = 'Description'; }
-        inp.value = r[k] ?? '';
+        inp.value = r[k] ?? (type === 'select' ? opts[0][0] : '');
         inp.dataset.k = k;
         inp.id = `f-${name}-${r.id}-${k}`;
         inp.setAttribute('aria-label', cfg.cols.find((c) => c[0] === k)[1]);
-        inp.disabled = !S.canWrite;
+        inp.disabled = !S.canWrite || !!(cfg.off && cfg.off(r, k));
         td.appendChild(inp);
       }
       if (cfg.stat) { const td = tr.insertCell(); td.className = 'stat'; td.textContent = cfg.stat(r); }
       const ta = tr.insertCell(); ta.className = 'act';
       const del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Supprimer cette ligne'); del.disabled = !S.canWrite;
+      if (cfg.dup) { const dup = document.createElement('button'); dup.type = 'button'; dup.className = 'dup'; dup.textContent = '⧉'; dup.title = 'Dupliquer cette ligne'; dup.setAttribute('aria-label', 'Dupliquer cette ligne'); dup.disabled = !S.canWrite; ta.appendChild(dup); }
       ta.appendChild(del);
     }
     const foot = document.createElement('div'); foot.className = 'tfoot';
@@ -797,9 +1073,11 @@
     const n = (v) => Number(v) || 0;
     if (name === 'travaux') return [['Réalisés', S.travaux.filter((t) => t.date <= ref).reduce((a, t) => a + n(t.montant), 0)], ['Prévus', S.travaux.filter((t) => t.date > ref).reduce((a, t) => a + n(t.montant), 0)]];
     if (name === 'loyers') return [['Perçus (années saisies)', RENT.years.reduce((a, y) => a + y.saisi, 0)], ['Estimés (années non saisies)', RENT.years.reduce((a, y) => a + y.estime, 0)], ['Total depuis l’achat', RENT.past]];
-    if (name === 'projection') return [['Loyer mensuel à la référence', RENT.rate[0]], ['Loyer mensuel dans 12 mois', RENT.rate[12]], ['Loyers des 12 mois suivants', RENT.fwd(0)]];
+    if (name === 'depots') return [['Dépôts détenus à la référence', S.depots.filter((d) => d.date && d.date <= ref).reduce((a, d) => a + n(d.montant), 0)]];
+    if (name === 'impots') { const ry = Number(ref.slice(0, 4)), ys = ISMODEL ? ISMODEL.years.filter((y) => y.annee < ry) : []; return [['Saisis', ys.filter((y) => y.reel).reduce((a, y) => a + y.is, 0)], ['Estimés (exercices sans saisie)', ys.filter((y) => !y.reel).reduce((a, y) => a + y.is, 0)], ['Total avant la référence', ys.reduce((a, y) => a + y.is, 0)]]; }
+    if (name === 'projection') return [['Loyer annuel de l’année de référence', RENT.annualAt(RENT.vy)], ['Loyer annuel un an plus tard', RENT.annualAt(RENT.vy + 1)], ['Loyers des 12 mois suivants', RENT.fwd(0)]];
     if (name === 'versements') return [['Total versé', S.versements.reduce((a, v) => a + n(v.montant), 0)]];
-    const act = S.charges.filter((c) => c.debut <= ref && (!c.fin || c.fin >= ref));
+    const act = S.charges.filter((c) => c.periodicite !== 'ponctuel' && c.debut <= ref && (!c.fin || c.fin >= ref));
     const by = (cat) => act.filter((c) => c.categorie === cat).reduce((a, c) => a + n(c.montant), 0);
     return [['Copropriété par an', by('copro')], ['Comptable par an', by('comptable')], ['Taxe foncière par an', by('taxe_fonciere')], ['Total en cours par an', act.reduce((a, c) => a + n(c.montant), 0)]];
   }
@@ -809,7 +1087,7 @@
       const inp = e.target.closest('[data-k]'), tr = e.target.closest('tr');
       if (!inp || !tr) return;
       const type = cfg.cols.find((c) => c[0] === inp.dataset.k)[2];
-      const val = type === 'number' ? (Number(inp.value) || 0) : inp.value.trim();
+      const val = type === 'number' || cfg.cols.find((c) => c[0] === inp.dataset.k)[4] ? (Number(inp.value) || 0) : inp.value.trim();
       store.update(name, tr.dataset.id, { [inp.dataset.k]: val });
       const row = S[name].find((r) => r.id === tr.dataset.id); if (row && S.db) row[inp.dataset.k] = val;
       onChange(name, true);
@@ -820,6 +1098,11 @@
       if (ex) cfg.extra[1]();
       if (add) store.add(name, cfg.blank());
       if (del) store.remove(name, del.closest('tr').dataset.id);
+      const dup = e.target.closest('.dup');
+      if (dup) {
+        const src = S[name].find((r) => r.id === dup.closest('tr').dataset.id);
+        if (src) { const { id, ...copy } = src; store.add(name, copy); }
+      }
     });
   }
 
@@ -856,12 +1139,16 @@
     if (!quiet || src) { for (const n in TABLES) if (n === src || src === 'hyp') renderTable(n); }
     renderAnalyse();
     renderLoyers();
+    renderTreso();
+    renderChargesAn();
   }
   function showView(v) {
     $$('main > section').forEach((s) => { s.hidden = s.dataset.view !== v; });
     $$('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.view === v)));
     if (v === 'analyse') renderCharts();
     if (v === 'loyers') renderLoyers();
+    if (v === 'tresorerie') renderTreso();
+    if (v === 'charges') renderChargesAn();
   }
 
   /* ---------- Supabase ---------- */
@@ -954,13 +1241,17 @@
   $('#reset').addEventListener('click', () => { sel.h = 0; sel.pas = 0; $('#r-pas').value = 0; $('#r-h').value = 0; renderAnalyse(); });
   let rz = 0;
   new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); }); }).observe($('#v-analyse'));
-  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); }); }).observe($('#v-loyers'));
+  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); renderTreso(); }); }).observe($('#v-loyers'));
+  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderTreso(); }); }).observe($('#v-tresorerie'));
+  $('#tr-h').addEventListener('change', (e) => { selT.years = Number(e.target.value); compute(); renderTreso(); });
+  $('#tr-plan').addEventListener('click', () => { const T = TRESO; if (!T || !T.short || !(T.need > 0)) return; store.add('versements', { date: T.short.ym + '-01', libelle: 'Versement prévu', nature: 'compte_courant', montant: Math.ceil(T.need / 100) * 100 }); });
   compute(); fillHyp();
   for (const n in TABLES) renderTable(n);
   const start = location.hash.slice(1);
-  showView(['analyse', 'travaux', 'charges', 'loyers', 'versements', 'hypotheses'].includes(start) ? start : 'analyse');
+  showView(['analyse', 'travaux', 'charges', 'loyers', 'versements', 'tresorerie', 'hypotheses'].includes(start) ? start : 'analyse');
   renderAnalyse();
   renderLoyers();
+  renderTreso();
   connect();
 })();
 </script>

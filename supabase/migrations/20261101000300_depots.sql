@@ -1,0 +1,1 @@
+Je ne comprends pas les charges de 2026. J'ai une différence entre le montant qui est calculé par l'application et le montant réel que j'ai en tête.
