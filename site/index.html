@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vente du local</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap">
+<style>
+  /* Layout: login overlay, sticky summary bar, six tabs (analysis + five input tables), one column that widens to two-up cards. */
+  :root {
+    color-scheme: light;
+    --bg: #f3f6f7; --panel: #ffffff; --fg: #13202a; --muted: #59697a; --line: #d9e1e6; --grid: #e7ecef;
+    --accent: #0e6a72; --soft: #e5f0f1; --s1: #0e6a72; --s2: #bd7410; --s3: #5568ad;
+    --bad: #b0382c; --ok: #2a7849; --warnbg: #fbefe3;
+    --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --num: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --r: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1a20; --panel: #15242c; --fg: #e6edf1; --muted: #93a4b0; --line: #26373f; --grid: #1e2f37;
+      --accent: #4fb7bd; --soft: #1a3238; --s1: #4fb7bd; --s2: #e1a24b; --s3: #8c9fe0;
+      --bad: #ef7c6f; --ok: #6cc18e; --warnbg: #33261a; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1a20; --panel: #15242c; --fg: #e6edf1; --muted: #93a4b0; --line: #26373f; --grid: #1e2f37;
+    --accent: #4fb7bd; --soft: #1a3238; --s1: #4fb7bd; --s2: #e1a24b; --s3: #8c9fe0;
+    --bad: #ef7c6f; --ok: #6cc18e; --warnbg: #33261a; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 20; background: var(--panel); }
+  .wrap { max-width: 1120px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding-block: 10px; }
+  .brand { font-family: var(--num); font-size: 20px; font-weight: 500; margin: 0; }
+  .figs { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-left: auto; }
+  .fig { display: flex; flex-direction: column; min-width: 0; }
+  .fig span:first-child { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .fig span:last-child { font-family: var(--num); font-size: 18px; }
+  .tabs { display: flex; gap: 2px; overflow-x: auto; width: 100%; }
+  .tab { font: inherit; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .save { font-size: 12px; color: var(--muted); align-self: center; }
+  .save[data-state="err"] { color: var(--bad); }
+  main { padding-block: 20px 48px; display: flex; flex-direction: column; gap: 16px; }
+  main > section[hidden] { display: none; }
+  .view { display: flex; flex-direction: column; gap: 16px; }
+  h1, h2, h3 { margin: 0; }
+  h2 { font-size: 15px; font-weight: 600; }
+  h3 { font-size: 13px; font-weight: 600; }
+  .lead { font-size: 15px; line-height: 1.55; margin: 0; max-width: 64rem; }
+  .lead b { font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+  .note { color: var(--muted); font-size: 12px; margin: 2px 0 12px; max-width: 62rem; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 16px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; min-width: 0; }
+  .tile.main { background: var(--soft); border-color: transparent; }
+  .tile .l { color: var(--muted); font-size: 12px; }
+  .tile .v { display: block; font-family: var(--num); font-size: 26px; line-height: 1.2; margin-top: 2px; overflow-wrap: anywhere; }
+  .tile .s { color: var(--muted); font-size: 12px; }
+  .ctl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 16px 28px; align-items: end; }
+  .ctl label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
+  .ctl .read { color: var(--muted); font-size: 12px; }
+  .ctl .read b { color: var(--fg); font-weight: 600; }
+  .btn { font: inherit; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 12px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+  .chart { position: relative; min-height: 260px; }
+  .chart svg { display: block; width: 100%; }
+  .tick { font-size: 11px; fill: var(--muted); }
+  .lbl { font-size: 11px; fill: var(--fg); }
+  .tip { position: absolute; z-index: 5; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 6px 20px rgba(0,0,0,.16); padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  .tip .th { color: var(--muted); margin-bottom: 2px; }
+  .tip .tr { display: flex; gap: 6px; align-items: center; }
+  .tip .sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .tip .tv { margin-left: auto; padding-left: 14px; font-weight: 600; }
+  .cmp { display: flex; flex-direction: column; gap: 14px; min-height: 120px; }
+  .cmp-h { display: flex; justify-content: space-between; gap: 12px; }
+  .cmp-h span:last-child { font-weight: 600; }
+  .cmp-s { color: var(--muted); font-size: 12px; margin: 1px 0 4px; }
+  .cmp-t { height: 14px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+  .cmp-b { height: 100%; border-radius: 4px; }
+  .verdict { margin: 14px 0 0; }
+  .alert { margin: 12px 0 0; padding: 8px 12px; border-radius: var(--r); background: var(--warnbg); color: var(--fg); font-size: 13px; }
+  .dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; margin: 0; }
+  .dl dt { color: var(--muted); }
+  .dl dd { margin: 0; text-align: right; font-weight: 500; }
+  .dl .tot { border-top: 1px solid var(--line); padding-top: 6px; color: var(--fg); font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+  table.ed { width: 100%; border-collapse: collapse; min-width: 640px; }
+  table.ed th { text-align: left; color: var(--muted); font-size: 12px; font-weight: 500; padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.ed td { padding: 4px 4px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  table.ed input, table.ed select { font: inherit; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 6px; width: 100%; min-width: 0; }
+  table.ed input:hover, table.ed select:hover { border-color: var(--line); }
+  table.ed input:focus, table.ed select:focus { background: var(--panel); border-color: var(--accent); }
+  table.ed input[type=number] { text-align: right; }
+  table.ed td.stat { font-size: 12px; color: var(--muted); white-space: nowrap; padding-inline: 8px; }
+  table.ed td.act { width: 36px; text-align: center; }
+  .del { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 6px; }
+  .del:hover { color: var(--bad); }
+  .empty { padding: 20px 8px; color: var(--muted); text-align: center; }
+  .tfoot { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 14px; align-items: center; }
+  .tfoot .fig span:last-child { font-size: 17px; }
+  .tfoot .btn { margin-left: auto; }
+  .hyp { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 20px 28px; }
+  .hyp h3 { margin-bottom: 8px; }
+  .field { display: grid; grid-template-columns: 1fr minmax(0, 8.5rem); gap: 8px; align-items: center; margin-bottom: 6px; }
+  .field label { color: var(--muted); }
+  .field input { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; width: 100%; min-width: 0; }
+  .field input[type=number] { text-align: right; }
+  .field .u { color: var(--muted); font-size: 11px; }
+  table.ro { width: 100%; border-collapse: collapse; }
+  table.ro th { text-align: left; color: var(--muted); font-size: 12px; font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.ro td { padding: 5px 6px; border-bottom: 1px solid var(--grid); }
+  table.ro th.n, table.ro td.n { text-align: right; }
+  table.ro td.o { color: var(--muted); font-size: 12px; }
+  .leg { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+  .leg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+  .authwrap { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: grid; place-items: center; padding: 16px; }
+  .auth { width: min(100%, 24rem); display: flex; flex-direction: column; gap: 10px; }
+  .auth label { font-weight: 600; }
+  .auth input { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
+  .auth .note { margin: 0; }
+  .todo { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+  @media (prefers-reduced-motion: no-preference) { .cmp-b { transition: width .3s ease; } }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <h1 class="brand">Vente du local</h1>
+    <div class="figs" aria-live="polite">
+      <div class="fig"><span>Net en poche</span><span data-k="net_vente" data-f="eur">—</span></div>
+      <div class="fig"><span>Gain total</span><span data-k="gain_total" data-f="eur">—</span></div>
+      <div class="fig"><span>Trésorerie SCI</span><span data-k="tresorerie" data-f="eur">—</span></div>
+    </div>
+    <div class="save" id="save" data-state="idle">Connexion en cours</div>
+    <span class="save" id="who" hidden></span><button class="btn" id="logout" type="button" hidden>Se déconnecter</button>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-analyse" data-view="analyse" aria-selected="true">Analyse</button>
+      <button class="tab" role="tab" id="tab-travaux" data-view="travaux" aria-selected="false">Travaux</button>
+      <button class="tab" role="tab" id="tab-charges" data-view="charges" aria-selected="false">Charges</button>
+      <button class="tab" role="tab" id="tab-loyers" data-view="loyers" aria-selected="false">Loyers</button>
+      <button class="tab" role="tab" id="tab-versements" data-view="versements" aria-selected="false">Versements</button>
+      <button class="tab" role="tab" id="tab-hypotheses" data-view="hypotheses" aria-selected="false">Hypothèses</button>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap">
+<main>
+  <section class="view" id="v-analyse" data-view="analyse">
+    <p class="lead">Une vente en <b data-k="annee_vente">—</b> à <b data-k="prix_vente" data-f="eur">—</b>
+      laisse <b data-k="net_vente" data-f="eur">—</b> net en poche, après <b data-k="impot_is" data-f="eur">—</b> d’impôt sur les sociétés,
+      <b data-k="impot_distrib" data-f="eur">—</b> d’impôt sur la distribution aux associés, <b data-k="crd" data-f="eur">—</b> de capital restant dû à rembourser
+      et <b data-k="ira" data-f="eur">—</b> d’indemnité de remboursement anticipé.
+      <span id="v-sell" hidden>Sur ces hypothèses, vendre puis placer le net rapporte plus que conserver le local.</span>
+      <span id="v-keep" hidden>Sur ces hypothèses, conserver le local rapporte plus que vendre puis placer le net.</span></p>
+
+    <div class="card">
+      <div class="ctl">
+        <div>
+          <label for="r-pas">Prix de vente</label>
+          <input id="r-pas" type="range" min="-8" max="8" step="1" value="0">
+          <div class="read"><b data-k="prix_vente" data-f="eur">—</b>, soit <b data-k="ecart_pct" data-f="spct">—</b> par rapport au prix visé</div>
+        </div>
+        <div>
+          <label for="r-h">Année de vente</label>
+          <input id="r-h" type="range" min="0" max="15" step="1" value="0">
+          <div class="read"><b data-k="annee_vente">—</b>, après <b data-k="duree" data-f="ans">—</b> de détention</div>
+        </div>
+        <button class="btn" id="reset" type="button">Revenir au scénario de référence</button>
+      </div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile main"><div class="l">Net en poche après vente</div><b class="v" data-k="net_vente" data-f="eur">—</b><div class="s">après IS et distribution aux associés</div></div>
+      <div class="tile"><div class="l">Plus-value professionnelle</div><b class="v" data-k="pv_brute" data-f="eur">—</b><div class="s">prix de vente − valeur nette comptable</div></div>
+      <div class="tile"><div class="l">Impôt sur les sociétés</div><b class="v" data-k="impot_is" data-f="eur">—</b><div class="s">sur la plus-value, après amortissements</div></div>
+      <div class="tile"><div class="l">Impôt sur la distribution</div><b class="v" data-k="impot_distrib" data-f="eur">—</b><div class="s">taxe forfaitaire sur le boni de liquidation</div></div>
+      <div class="tile"><div class="l">Frais de remboursement anticipé</div><b class="v" data-k="ira" data-f="eur">—</b><div class="s">plafonnés par le contrat</div></div>
+      <div class="tile"><div class="l">Gain total depuis l’achat</div><b class="v" data-k="gain_total" data-f="eur">—</b><div class="s">net en poche − apport − versements</div></div>
+    </div>
+
+    <div class="grid2">
+      <section class="card"><h2>Du prix de vente au net en poche</h2><p class="note">Ce qu’il reste de la vente une fois le prêt soldé, la trésorerie de la SCI ajoutée et les impôts payés.</p><div class="chart" id="c-bridge"></div></section>
+      <section class="card"><h2>Effet du prix de vente</h2><p class="note">Pour l’année de vente choisie. Un clic place le curseur de prix.</p><div class="chart" id="c-curve"></div></section>
+    </div>
+
+    <section class="card"><h2>Effet de l’année de vente</h2><p class="note">Barres : impôts dus à la vente (IS et distribution). Courbe : gain total. Sans abattement pour durée de détention, les amortissements font monter la plus-value avec les années. Un clic choisit l’année.</p><div class="chart" id="c-years"></div></section>
+
+    <div class="grid2">
+      <section class="card"><h2>Vendre ou conserver, sur un an</h2><p class="note">Revenu net du local (loyers moins charges, intérêts du prêt, plus valorisation annuelle supposée) contre le rendement du net placé.</p><div class="cmp" id="c-cmp"></div></section>
+      <section class="card"><h2>Détail de la plus-value et des impôts</h2><p class="note">SCI à l’IS : plus-value sur la valeur nette comptable, sans abattement pour durée de détention. L’impôt sur la distribution suppose une liquidation après la vente, avec des associés particuliers. Apports et versements sont remboursés sans impôt.</p><dl class="dl" id="dl-fiscal"></dl></section>
+    </div>
+
+    <section class="card"><h2>Bilan depuis l’achat</h2><p class="note">Cumul de l’achat à la date de vente du scénario, avant l’IS payé sur les loyers. La trésorerie estimée doit rester proche de zéro si le tableau des versements est complet.</p><dl class="dl" id="dl-bilan"></dl>
+      <p class="alert" id="al-tres" hidden>La trésorerie estimée est négative : il manque des versements dans le tableau, ou des charges et mensualités sont surévaluées.</p></section>
+
+    <section class="card"><h2>Ce que le calcul ne couvre pas encore</h2><ul class="todo">
+      <li>IS payé sur les loyers des années passées, déficits reportables, vacance locative et loyers impayés futurs.</li>
+      <li>Amortissement linéaire unique : la ventilation par composants de la liasse fiscale changera la plus-value.</li>
+      <li>Frais de mainlevée d’hypothèque.</li></ul></section>
+  </section>
+
+  <section class="view" id="v-travaux" data-view="travaux" hidden>
+    <section class="card"><h2>Travaux</h2>
+      <p class="note">Montants TTC : la SCI n’est pas assujettie à la TVA, donc la TVA est un coût. « Immobilisé » : le montant s’ajoute au coût du bien et s’amortit à partir de sa date. « Charge » : il est déduit du résultat. Un travail daté après la date de vente de référence est « prévu » et compte dans un scénario s’il est antérieur à la vente.</p>
+      <div class="tablewrap" id="t-travaux"></div></section>
+  </section>
+
+  <section class="view" id="v-charges" data-view="charges" hidden>
+    <section class="card"><h2>Charges</h2>
+      <p class="note">Charges annuelles TTC (copropriété, comptable, taxe foncière…). Chaque ligne court de sa date de début à sa date de fin ; sans date de fin, elle continue. Un changement de montant s’écrit en deux lignes.</p>
+      <div class="tablewrap" id="t-charges"></div></section>
+  </section>
+
+  <section class="view" id="v-loyers" data-view="loyers" hidden>
+    <section class="card"><h2>Loyers perçus, année par année</h2>
+      <p class="note">Total encaissé sur chaque année civile, sans TVA. La dernière année saisie court jusqu’à la date de vente de référence. Une année sans ligne est estimée au loyer mensuel de base (onglet Hypothèses) ; le bouton ci-dessous crée les lignes manquantes pour que tu les ajustes.</p>
+      <div class="tablewrap" id="t-loyers"></div></section>
+    <section class="card"><h2>Loyer mensuel prévu</h2>
+      <p class="note">Évolutions du loyer à partir de la date de référence. Chaque ligne s’applique dès le mois indiqué et jusqu’à la ligne suivante. Une indexation annuelle automatique peut s’ajouter (onglet Hypothèses).</p>
+      <div class="tablewrap" id="t-projection"></div></section>
+    <section class="card"><h2>Loyers année par année</h2>
+      <p class="note">Perçus, estimés ou projetés : c’est cette série qui alimente les loyers encaissés, le résultat courant et la comparaison vendre ou conserver.</p>
+      <div class="chart" id="c-loyers"></div>
+      <div class="leg"><span><i style="background:var(--s1)"></i>Perçu</span><span><i style="background:var(--s3)"></i>Estimé</span><span><i style="background:var(--s2)"></i>Projeté</span></div>
+      <div class="tablewrap" id="t-recap" style="margin-top:12px"></div></section>
+  </section>
+
+  <section class="view" id="v-versements" data-view="versements" hidden>
+    <section class="card"><h2>Versements des associés</h2>
+      <p class="note">Argent injecté dans la SCI pour garder la trésorerie positive. Les versements sont remboursés sans impôt à la liquidation ; seul le surplus est taxé.</p>
+      <div class="tablewrap" id="t-versements"></div></section>
+  </section>
+
+  <section class="view" id="v-hypotheses" data-view="hypotheses" hidden>
+    <section class="card"><h2>Hypothèses</h2>
+      <p class="note">Achat et prêt : valeurs réelles (échéancier de la Société Générale au 31/10/2026, intégré à la page). Les autres valeurs sont provisoires jusqu’à confirmation : mensualités déjà payées, paramètres d’amortissement, prix visé, frais de vente.</p>
+      <div class="hyp" id="hyp"></div></section>
+  </section>
+</main>
+</div>
+
+<div class="authwrap" id="auth" hidden>
+  <form class="card auth" id="auth-form">
+    <h1 class="brand">Vente du local</h1>
+    <p class="note" id="auth-intro">Entre ton adresse e-mail : tu recevras un lien de connexion, sans mot de passe.</p>
+    <label for="auth-mail">Adresse e-mail</label>
+    <input id="auth-mail" type="email" required autocomplete="email" inputmode="email">
+    <button class="btn primary" id="auth-send" type="submit">Recevoir un lien de connexion</button>
+    <button class="btn" id="auth-out" type="button" hidden>Changer de compte</button>
+    <p class="note" id="auth-msg" role="status"></p>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(() => {
+  const today0 = () => new Date().toISOString().slice(0, 10);
+  const DEFAULT_HYP = {
+    date_achat: '2020-01-01', prix_achat: 0, frais_notaire: 0, frais_agence_achat: 0,
+    emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, mensualites_passees: 0, ira_plafond_pct: 3, ira_mois: 6,
+    loyer_mensuel: 0, indexation_loyer_pct: 0, date_vente_ref: today0(), prix_vente_vise: 0, revalo_annuelle_pct: 1, frais_vente_pct: 4, frais_diagnostics: 0,
+    part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, pfu_pct: 30, rendement_alternatif_pct: 3,
+  };
+  const HYP_GROUPS = [
+    ['Achat', [['date_achat', 'Date d’achat', 'date'], ['prix_achat', 'Prix d’achat (net vendeur)', '€'], ['frais_notaire', 'Frais d’acte d’achat et de prêt', '€'], ['frais_agence_achat', 'Frais d’agence à l’achat', '€']]],
+    ['Prêt', [['emprunt', 'Capital emprunté', '€'], ['taux_pret_pct', 'Taux d’intérêt en cours', '%'], ['assurance_mensuelle', 'Assurance emprunteur par mois', '€'], ['mensualites_passees', 'Mensualités déjà payées (estimation)', '€'], ['ira_plafond_pct', 'Indemnité : plafond en % du capital dû', '%'], ['ira_mois', 'Indemnité : plafond en mois d’intérêts', 'mois']]],
+    ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, avant évolution prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
+    ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_vente_pct', 'Frais d’agence à la vente', '%'], ['frais_diagnostics', 'Diagnostics et frais divers', '€']]],
+    ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
+  ];
+  const today = () => new Date().toISOString().slice(0, 10);
+  const TABLES = {
+    travaux: {
+      cols: [['date', 'Date', 'date'], ['libelle', 'Travaux', 'text'], ['montant', 'Montant TTC (€)', 'number'], ['traitement', 'Traitement', 'select', [['immobilise', 'Immobilisé'], ['charge', 'Charge']]]],
+      blank: () => ({ date: today(), libelle: '', montant: 0, traitement: 'immobilise' }), sort: 'date', add: 'Ajouter des travaux',
+      empty: 'Aucun travaux saisi. Ajoute la première ligne.',
+      stat: (r) => (r.date > S.hyp.date_vente_ref ? 'Prévu' : 'Réalisé'),
+    },
+    charges: {
+      cols: [['debut', 'Début', 'date'], ['fin', 'Fin', 'date'], ['libelle', 'Charge', 'text'], ['categorie', 'Catégorie', 'select', [['copro', 'Copropriété'], ['comptable', 'Comptable'], ['taxe_fonciere', 'Taxe foncière'], ['autre', 'Autre']]], ['montant', 'Par an (€)', 'number']],
+      blank: () => ({ debut: S.hyp.date_achat, fin: '', libelle: '', categorie: 'copro', montant: 0 }), sort: 'debut', add: 'Ajouter une charge',
+      empty: 'Aucune charge saisie. Ajoute la copropriété, le comptable et la taxe foncière.',
+      stat: (r) => (r.fin && r.fin < S.hyp.date_vente_ref ? 'Terminée' : 'En cours'),
+    },
+    loyers: {
+      cols: [['annee', 'Année', 'number'], ['montant', 'Perçu dans l’année (€)', 'number'], ['libelle', 'Commentaire', 'text']],
+      blank: () => ({ annee: Math.max(Number(S.hyp.date_achat.slice(0, 4)) - 1, ...S.loyers.map((l) => Number(l.annee) || 0)) + 1, montant: 0, libelle: '' }), sort: 'annee', add: 'Ajouter une année',
+      empty: 'Aucune année saisie : tous les loyers passés sont estimés au loyer mensuel de base.',
+      stat: (r) => { const y = Number(S.hyp.date_vente_ref.slice(0, 4)), a = Number(r.annee); return a > y ? 'Ignoré (projection)' : a === y ? 'Jusqu’à la référence' : a < Number(S.hyp.date_achat.slice(0, 4)) ? 'Avant l’achat' : 'Perçu'; },
+      extra: ['Ajouter les années manquantes', () => { const ys = RENT.years.filter((y) => y.annee <= RENT.vy && !y.exists); for (const y of ys) store.add('loyers', { annee: y.annee, montant: Math.round(y.estime), libelle: 'Estimation à ajuster' }); }],
+    },
+    projection: {
+      cols: [['debut', 'Dès le mois de', 'date'], ['mensuel', 'Loyer par mois (€)', 'number'], ['libelle', 'Commentaire', 'text']],
+      blank: () => ({ debut: S.hyp.date_vente_ref, mensuel: Math.round(RENT ? RENT.rate[0] : Number(S.hyp.loyer_mensuel) || 0), libelle: '' }), sort: 'debut', add: 'Ajouter une évolution',
+      empty: 'Aucune évolution prévue : le loyer mensuel de base s’applique à tout le futur.',
+    },
+    versements: {
+      cols: [['date', 'Date', 'date'], ['libelle', 'Versement', 'text'], ['nature', 'Nature', 'select', [['compte_courant', 'Compte courant'], ['capital', 'Capital']]], ['montant', 'Montant (€)', 'number']],
+      blank: () => ({ date: today(), libelle: '', nature: 'compte_courant', montant: 0 }), sort: 'date', add: 'Ajouter un versement',
+      empty: 'Aucun versement saisi. Ajoute chaque somme injectée dans la SCI.',
+    },
+  };
+
+  const S = { hyp: { ...DEFAULT_HYP }, travaux: [], charges: [], loyers: [], projection: [], versements: [], echeancier: [], canWrite: true, db: null };
+  const sel = { h: 0, pas: 0 };
+  let R = [];
+  let RENT = null;
+
+  /* ---------- formats ---------- */
+  const nf = (o) => new Intl.NumberFormat('fr-FR', o);
+  const EUR = nf({ style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const CMP = nf({ notation: 'compact', maximumFractionDigits: 1 });
+  const fmtPct = (v, d = 2) => nf({ maximumFractionDigits: d }).format(v) + ' %';
+  const kE = (v) => CMP.format(v) + ' €';
+  const fmt = (f, v) => {
+    if (v == null || Number.isNaN(v)) return '—';
+    if (f === 'eur') return EUR.format(v);
+    if (f === 'spct') return (v > 0 ? '+' : '') + fmtPct(v, 1);
+    if (f === 'ans') return v + (v > 1 ? ' ans' : ' an');
+    if (f === 'date') return new Date(v + 'T00:00:00Z').toLocaleDateString('fr-FR', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' });
+    return String(v);
+  };
+
+  /* ---------- calcul ---------- */
+  const ymd = (s) => String(s).split('-').map(Number);
+  const NMOIS = 12 * 16 + 12;
+  function rentModel(h) {
+    const [ay] = ymd(h.date_achat), [vy, vm] = ymd(h.date_vente_ref);
+    const mi = (ym) => { const [y, m] = ymd(ym); return y * 12 + m; };
+    const proj = S.projection.filter((p) => p.debut).map((p) => ({ i: mi(String(p.debut).slice(0, 7)), m: Number(p.mensuel) || 0 })).sort((a, b) => a.i - b.i);
+    const refI = vy * 12 + vm, idx = 1 + h.indexation_loyer_pct / 100;
+    const rateAt = (i) => { let base = h.loyer_mensuel, from = refI; for (const p of proj) if (p.i <= i) { base = p.m; from = p.i; } return base * Math.pow(idx, Math.max(0, Math.floor((i - from) / 12))); };
+    const rate = Array.from({ length: NMOIS }, (_, k) => rateAt(refI + k));
+    const cum = [0]; for (let k = 0; k < NMOIS; k++) cum.push(cum[k] + rate[k]);
+    const sums = new Map(), yearOf = (k) => vy + Math.floor((vm - 1 + k) / 12);
+    for (const l of S.loyers) { const a = Number(l.annee); if (a) sums.set(a, (sums.get(a) || 0) + (Number(l.montant) || 0)); }
+    const monthsIn = (Y) => {
+      const start = h.date_achat > `${Y}-01-01` ? h.date_achat : `${Y}-01-01`, end = h.date_vente_ref < `${Y + 1}-01-01` ? h.date_vente_ref : `${Y + 1}-01-01`;
+      return Math.max(0, (Date.parse(end) - Date.parse(start)) / 864e5) / 30.4375;
+    };
+    const years = []; let past = 0;
+    for (let Y = ay; Y <= vy + 15; Y++) {
+      const exists = Y <= vy && sums.has(Y);
+      const saisi = exists ? sums.get(Y) : 0;
+      const estime = Y <= vy && !exists ? h.loyer_mensuel * monthsIn(Y) : 0;
+      let projete = 0, nm = 0;
+      for (let k = 0; k < NMOIS; k++) if (yearOf(k) === Y) { projete += rate[k]; nm++; }
+      past += saisi + estime;
+      years.push({ annee: Y, exists, saisi, estime, projete, total: saisi + estime + projete, mois: Y <= vy ? monthsIn(Y) + nm : nm });
+    }
+    return { vy, rate, past, years, cum, fwd: (hz) => cum[12 * hz + 12] - cum[12 * hz] };
+  }
+  function compute() {
+    const h = {};
+    for (const k in DEFAULT_HYP) h[k] = typeof DEFAULT_HYP[k] === 'number' ? Number(S.hyp[k]) || 0 : (S.hyp[k] || DEFAULT_HYP[k]);
+    const trav = S.travaux.filter((t) => t.date).map((t) => ({ ...t, montant: Number(t.montant) || 0 }));
+    const chg = S.charges.filter((c) => c.debut).map((c) => ({ ...c, montant: Number(c.montant) || 0 }));
+    const ver = S.versements.filter((v) => v.date).map((v) => ({ ...v, montant: Number(v.montant) || 0 }));
+    const [ay, am, ad] = ymd(h.date_achat);
+    const [vy, vm, vd] = ymd(h.date_vente_ref);
+    const ECH = S.echeancier.map((e) => ({ date: e.date, echeance: Number(e.echeance) || 0, crd: Number(e.crd) || 0, amort: Number(e.amortissement) || 0 })).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const crd0 = ECH.length ? ECH[0].crd + ECH[0].amort : h.emprunt;
+    const baseCout = h.prix_achat + h.frais_notaire + h.frais_agence_achat;
+    const apport0 = baseCout - h.emprunt;
+    const IS = (b) => (b <= 0 ? 0 : (h.is_taux_reduit_pct * Math.min(b, h.is_plafond_reduit) + h.is_taux_normal_pct * Math.max(0, b - h.is_plafond_reduit)) / 100);
+    const baseAmort = baseCout * (1 - h.part_terrain_pct / 100);
+    const amortAn = baseAmort * h.amort_taux_pct / 100;
+    const moisEntre = (d1, d2) => {
+      const [y1, m1, e1] = ymd(d1), [y2, m2, e2] = ymd(d2);
+      return Math.max(0, (y2 - y1) * 12 + (m2 - m1) - (e2 < e1 ? 1 : 0));
+    };
+    const L = rentModel(h);
+    RENT = L;
+    const out = [];
+    for (let hz = 0; hz <= 15; hz++) {
+      for (let pas = -8; pas <= 8; pas++) {
+        const annee = vy + hz;
+        const dv = `${annee}-${String(vm).padStart(2, '0')}-${String(vd).padStart(2, '0')}`;
+        const mois = moisEntre(h.date_achat, dv);
+        const duree = Math.floor(mois / 12);
+        const payes = ECH.filter((e) => e.date <= dv);
+        const crd = payes.length ? payes[payes.length - 1].crd : crd0;
+        const prix = h.prix_vente_vise * (1 + pas * 0.025) * Math.pow(1 + h.revalo_annuelle_pct / 100, hz);
+        const fraisVente = prix * h.frais_vente_pct / 100 + h.frais_diagnostics;
+        let capW = 0, amW = 0, amWAn = 0, cashW = 0, chargeVente = 0;
+        for (const t of trav) {
+          if (t.date > dv) continue;
+          cashW += t.montant;
+          if (t.traitement === 'immobilise') {
+            capW += t.montant;
+            if (t.date <= h.date_vente_ref) {
+              const mt = moisEntre(t.date, dv);
+              amW += Math.min(t.montant, t.montant * h.amort_taux_pct / 100 * mt / 12);
+              if (h.amort_taux_pct > 0 && mt < 100 / h.amort_taux_pct * 12) amWAn += t.montant * h.amort_taux_pct / 100;
+            }
+          } else if (t.date > h.date_vente_ref && ymd(t.date)[0] === annee) chargeVente += t.montant;
+        }
+        let chargesCum = 0, chargesAn = 0;
+        for (const c of chg) {
+          const fin = c.fin || '9999-12-31';
+          const debut = c.debut > h.date_achat ? c.debut : h.date_achat;
+          const finEff = fin < dv ? fin : dv;
+          if (finEff > debut) chargesCum += c.montant * moisEntre(debut, finEff) / 12;
+          if (c.debut <= dv && fin >= dv) chargesAn += c.montant;
+        }
+        const versCum = ver.filter((v) => v.date <= dv).reduce((t, v) => t + v.montant, 0);
+        const apport = apport0 + versCum;
+        const capitalise = baseCout + capW;
+        const cout = baseCout + cashW;
+        const amortBien = Math.min(baseAmort, amortAn * mois / 12);
+        const amort = amortBien + amW;
+        const vnc = capitalise - amort;
+        const pvb = prix - fraisVente - vnc;
+        const courant = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100 - h.assurance_mensuelle * 12 - (amortBien < baseAmort ? amortAn : 0) - amWAn - chargeVente;
+        const impotIs = Math.max(0, IS(pvb + courant) - IS(courant));
+        const ira = Math.min(crd * h.ira_plafond_pct / 100, crd * h.taux_pret_pct / 100 * h.ira_mois / 12);
+        const netSci = prix - fraisVente - crd - ira - impotIs;
+        const loyers = L.past + L.cum[12 * hz];
+        const mensualites = h.mensualites_passees + payes.reduce((t, e) => t + e.echeance, 0);
+        const tres = versCum + loyers - chargesCum - mensualites - cashW;
+        const impotDistrib = Math.max(0, netSci + tres - apport) * h.pfu_pct / 100;
+        const net = netSci + tres - impotDistrib;
+        const revenuNet = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100;
+        const r = Math.round;
+        out.push({
+          h: hz, pas, annee_vente: annee, ecart_pct: pas * 2.5, duree,
+          prix_vente: r(prix), frais_vente: r(fraisVente), cout_capitalise: r(capitalise), amort_cumules: r(amort), vnc: r(vnc), pv_brute: r(pvb),
+          resultat_courant: r(courant), impot_is: r(impotIs), net_sci: r(netSci), impot_distrib: r(impotDistrib), impot: r(impotIs + impotDistrib),
+          crd: r(crd), ira: r(ira), net_vente: r(net), tresorerie: r(tres),
+          cout_total: r(cout), apport: r(apport), apport_initial: r(apport0), versements_cumules: r(versCum), travaux_payes: r(cashW),
+          loyers_cumules: r(loyers), charges_cumulees: r(chargesCum), charges_an: r(chargesAn), mensualites_cumulees: r(mensualites),
+          gain_total: r(net - apport),
+          revenu_conserver: r(revenuNet + prix * h.revalo_annuelle_pct / 100), revenu_alt: r(net * h.rendement_alternatif_pct / 100),
+        });
+      }
+    }
+    R = out;
+  }
+  const cur = () => R.find((r) => r.h === sel.h && r.pas === sel.pas);
+
+  /* ---------- dom helpers ---------- */
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const NS = 'http://www.w3.org/2000/svg';
+  const svgEl = (n, a, p) => { const e = document.createElementNS(NS, n); for (const k in a || {}) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+  const measure = (svg, strs) => {
+    const t = svgEl('text', { class: 'tick', x: 0, y: -999 }, svg);
+    let m = 0;
+    for (const s of strs) { t.textContent = s; m = Math.max(m, t.getComputedTextLength()); }
+    t.remove();
+    return m;
+  };
+  const mkTip = (box) => {
+    const t = document.createElement('div');
+    t.className = 'tip';
+    t.hidden = true;
+    box.appendChild(t);
+    return {
+      show(head, lines, x, y) {
+        t.replaceChildren();
+        const hd = document.createElement('div'); hd.className = 'th'; hd.textContent = head; t.appendChild(hd);
+        for (const l of lines) {
+          const row = document.createElement('div'); row.className = 'tr';
+          if (l.c) { const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = l.c; row.appendChild(sw); }
+          const a = document.createElement('span'); a.textContent = l.k;
+          const b = document.createElement('span'); b.className = 'tv'; b.textContent = l.v;
+          row.append(a, b); t.appendChild(row);
+        }
+        t.hidden = false;
+        t.style.left = Math.max(0, Math.min(box.clientWidth - t.offsetWidth, x + 14)) + 'px';
+        t.style.top = Math.max(0, y - t.offsetHeight - 8) + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  };
+  const pt = (svg, e, W) => { const b = svg.getBoundingClientRect(); return { x: (e.clientX - b.left) * (W / b.width), cx: e.clientX - b.left, cy: e.clientY - b.top }; };
+  const mkSvg = (el, H, label) => {
+    const W = Math.max(280, el.clientWidth);
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': label });
+    svg.style.height = 'auto';
+    el.replaceChildren(svg);
+    return { svg, W };
+  };
+  const tx = (svg, a, text, color) => { const t = svgEl('text', a, svg); t.textContent = text; if (color) t.style.fill = color; return t; };
+  const fillBar = (e, c) => { e.style.fill = c; return e; };
+
+  /* ---------- graphiques ---------- */
+  function drawBridge(el, r) {
+    const H = 310, mt = 6, mb = 6;
+    const { svg, W } = mkSvg(el, H, 'Passage du prix de vente au net en poche');
+    let c = r.prix_vente;
+    const steps = [{ n: 'Prix de vente', a: 0, b: r.prix_vente, v: r.prix_vente, t: 1 }];
+    for (const [n, d, bad] of [['Frais de vente', -r.frais_vente], ['Prêt à solder', -r.crd], ['Frais de remb. anticipé', -r.ira], ['IS sur plus-value', -r.impot_is, 1], ['Trésorerie de la SCI', r.tresorerie, 2], ['Impôt distribution', -r.impot_distrib, 1]]) {
+      steps.push({ n, a: Math.min(c, c + d), b: Math.max(c, c + d), v: d, bad });
+      c += d;
+    }
+    steps.push({ n: 'Net en poche', a: Math.min(0, r.net_vente), b: Math.max(0, r.net_vente), v: r.net_vente, t: 1 });
+    const ml = measure(svg, steps.map((d) => d.n)) + 14;
+    const mr = measure(svg, steps.map((d) => fmt('eur', d.v))) + 12;
+    const lo = Math.min(0, ...steps.map((d) => d.a)), hi = Math.max(...steps.map((d) => d.b));
+    const x = d3.scaleLinear([lo, hi], [ml, W - mr]);
+    const y = d3.scaleBand(steps.map((d) => d.n), [mt, H - mb]).padding(0.28);
+    const tip = mkTip(el);
+    const bh = Math.min(26, y.bandwidth());
+    steps.forEach((d) => {
+      const cy = y(d.n) + y.bandwidth() / 2;
+      tx(svg, { x: ml - 8, y: cy, 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'lbl' }, d.n);
+      const bar = fillBar(svgEl('rect', { x: x(d.a), y: cy - bh / 2, width: Math.max(1, x(d.b) - x(d.a)), height: bh, rx: 3 }, svg), d.t ? 'var(--s1)' : d.bad === 1 ? 'var(--bad)' : d.bad === 2 ? 'var(--s3)' : 'var(--muted)');
+      if (!d.t && d.bad !== 1 && d.bad !== 2) bar.style.opacity = '.45';
+      tx(svg, { x: x(d.b) + 6, y: cy, 'dominant-baseline': 'middle', class: 'lbl' }, fmt('eur', d.v));
+      bar.addEventListener('pointermove', (e) => { const p = pt(svg, e, W); tip.show(d.n, [{ k: 'Montant', v: fmt('eur', d.v) }, { k: 'Part du prix de vente', v: fmtPct(Math.abs(d.v) / r.prix_vente * 100, 1) }], p.cx, p.cy); });
+      bar.addEventListener('pointerleave', tip.hide);
+    });
+    svgEl('line', { x1: x(0), x2: x(0), y1: mt, y2: H - mb, stroke: 'var(--muted)' }, svg);
+  }
+
+  function drawCurve(el) {
+    const pts = R.filter((r) => r.h === sel.h).sort((a, b) => a.pas - b.pas);
+    const H = 300, mt = 14, mb = 30;
+    const { svg, W } = mkSvg(el, H, 'Net en poche et gain total selon le prix de vente');
+    const series = [{ key: 'net_vente', name: 'Net en poche', c: 'var(--s1)' }, { key: 'gain_total', name: 'Gain total', c: 'var(--s2)' }];
+    const all = pts.flatMap((p) => [p.net_vente, p.gain_total, 0]);
+    const y = d3.scaleLinear([d3.min(all), d3.max(all)], [H - mb, mt]).nice();
+    const yt = y.ticks(5);
+    const ml = measure(svg, yt.map(kE)) + 12;
+    const mr = measure(svg, series.map((q) => q.name)) + 14;
+    const x = d3.scaleLinear(d3.extent(pts, (p) => p.prix_vente), [ml, W - mr]);
+    yt.forEach((t) => {
+      svgEl('line', { x1: ml, x2: W - mr, y1: y(t), y2: y(t), stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }, svg);
+      tx(svg, { x: ml - 6, y: y(t), 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'tick' }, kE(t));
+    });
+    d3.ticks(x.domain()[0], x.domain()[1], Math.max(2, Math.floor((W - ml - mr) / 90))).forEach((t) => tx(svg, { x: x(t), y: H - 8, 'text-anchor': 'middle', class: 'tick' }, kE(t)));
+    const ends = [];
+    series.forEach((q) => {
+      const p = svgEl('path', { d: d3.line().x((d) => x(d.prix_vente)).y((d) => y(d[q.key]))(pts), fill: 'none', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
+      p.style.stroke = q.c;
+      ends.push({ q, y: y(pts[pts.length - 1][q.key]) });
+    });
+    ends.sort((a, b) => a.y - b.y);
+    if (ends[1].y - ends[0].y < 14) { const m = (ends[0].y + ends[1].y) / 2; ends[0].y = m - 7; ends[1].y = m + 7; }
+    ends.forEach((e) => tx(svg, { x: W - mr + 6, y: e.y, 'dominant-baseline': 'middle', class: 'lbl' }, e.q.name, e.q.c));
+    const rule = svgEl('line', { y1: mt, y2: H - mb, stroke: 'var(--muted)', 'stroke-dasharray': '4 3' }, svg);
+    const dots = series.map((q) => fillBar(svgEl('circle', { r: 4 }, svg), q.c));
+    const place = (p) => {
+      rule.setAttribute('x1', x(p.prix_vente)); rule.setAttribute('x2', x(p.prix_vente));
+      series.forEach((q, i) => { dots[i].setAttribute('cx', x(p.prix_vente)); dots[i].setAttribute('cy', y(p[q.key])); });
+    };
+    const now = pts.find((p) => p.pas === sel.pas) || pts[0];
+    place(now);
+    const tip = mkTip(el);
+    const near = (e) => { const p = pt(svg, e, W); const i = Math.max(0, Math.min(pts.length - 1, Math.round((p.x - ml) / (W - mr - ml) * (pts.length - 1)))); return { d: pts[i], p }; };
+    svg.addEventListener('pointermove', (e) => { const { d, p } = near(e); place(d); tip.show(`Vente à ${fmt('eur', d.prix_vente)} (${fmt('spct', d.ecart_pct)})`, series.map((q) => ({ c: q.c, k: q.name, v: fmt('eur', d[q.key]) })), p.cx, p.cy); });
+    svg.addEventListener('pointerleave', () => { place(now); tip.hide(); });
+    svg.addEventListener('click', (e) => { sel.pas = near(e).d.pas; $('#r-pas').value = sel.pas; renderAnalyse(); });
+  }
+
+  function drawYears(el) {
+    const pts = R.filter((r) => r.pas === sel.pas).sort((a, b) => a.h - b.h);
+    const H = 300, mt = 14, mb = 30;
+    const { svg, W } = mkSvg(el, H, 'Impôts à la vente et gain total selon l’année de vente');
+    const all = pts.flatMap((p) => [p.impot, p.gain_total, 0]);
+    const y = d3.scaleLinear([d3.min(all), d3.max(all)], [H - mb, mt]).nice();
+    const yt = y.ticks(5);
+    const ml = measure(svg, yt.map(kE)) + 12;
+    const mr = measure(svg, ['Gain total']) + 14;
+    const x = d3.scaleBand(pts.map((p) => p.h), [ml, W - mr]).padding(0.25);
+    yt.forEach((t) => {
+      svgEl('line', { x1: ml, x2: W - mr, y1: y(t), y2: y(t), stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }, svg);
+      tx(svg, { x: ml - 6, y: y(t), 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'tick' }, kE(t));
+    });
+    const step = Math.max(1, Math.ceil((measure(svg, ['2026']) + 8) / x.step()));
+    const bw = Math.min(32, x.bandwidth());
+    const tip = mkTip(el);
+    pts.forEach((p) => {
+      const cx = x(p.h) + x.bandwidth() / 2;
+      const bar = fillBar(svgEl('rect', { x: cx - bw / 2, y: Math.min(y(p.impot), y(0)), width: bw, height: Math.abs(y(0) - y(p.impot)), rx: 3, opacity: p.h === sel.h ? 1 : 0.5 }, svg), 'var(--s3)');
+      if (p.h % step === 0) tx(svg, { x: cx, y: H - 8, 'text-anchor': 'middle', class: 'tick' }, String(p.annee_vente));
+      void bar;
+    });
+    const line = svgEl('path', { d: d3.line().x((p) => x(p.h) + x.bandwidth() / 2).y((p) => y(p.gain_total))(pts), fill: 'none', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
+    line.style.stroke = 'var(--s2)';
+    const last = pts[pts.length - 1];
+    tx(svg, { x: x(last.h) + x.bandwidth() / 2 + 10, y: y(last.gain_total), 'dominant-baseline': 'middle', class: 'lbl' }, 'Gain total', 'var(--s2)');
+    const c = pts.find((p) => p.h === sel.h);
+    if (c) fillBar(svgEl('circle', { cx: x(c.h) + x.bandwidth() / 2, cy: y(c.gain_total), r: 4 }, svg), 'var(--s2)');
+    pts.forEach((p) => {
+      const hit = svgEl('rect', { x: x(p.h), y: mt, width: x.bandwidth(), height: H - mb - mt, fill: 'transparent', style: 'cursor:pointer' }, svg);
+      hit.addEventListener('pointermove', (e) => {
+        const q = pt(svg, e, W);
+        tip.show(`Vente en ${p.annee_vente} (${fmt('ans', p.duree)} de détention)`, [
+          { c: 'var(--s3)', k: 'IS + distribution', v: fmt('eur', p.impot) }, { c: 'var(--s2)', k: 'Gain total', v: fmt('eur', p.gain_total) },
+          { k: 'Plus-value', v: fmt('eur', p.pv_brute) }, { k: 'Amortissements cumulés', v: fmt('eur', p.amort_cumules) }], q.cx, q.cy);
+      });
+      hit.addEventListener('pointerleave', tip.hide);
+      hit.addEventListener('click', () => { sel.h = p.h; $('#r-h').value = p.h; renderAnalyse(); });
+    });
+  }
+
+  function drawCompare(el, r) {
+    const alt = Number(S.hyp.rendement_alternatif_pct) || 0;
+    const items = [
+      { n: 'Conserver le local', s: 'Revenu net et valorisation sur un an', v: r.revenu_conserver, c: 'var(--s1)' },
+      { n: 'Vendre et placer le net', s: `Net en poche placé à ${fmtPct(alt, 2)}`, v: r.revenu_alt, c: 'var(--s2)' },
+    ];
+    const max = Math.max(1, ...items.map((i) => Math.abs(i.v)));
+    el.replaceChildren(...items.map((i) => {
+      const row = document.createElement('div');
+      const hd = document.createElement('div'); hd.className = 'cmp-h';
+      const a = document.createElement('span'); a.textContent = i.n;
+      const b = document.createElement('span'); b.textContent = fmt('eur', i.v) + ' par an';
+      hd.append(a, b);
+      const s = document.createElement('div'); s.className = 'cmp-s'; s.textContent = i.s;
+      const t = document.createElement('div'); t.className = 'cmp-t';
+      const bar = document.createElement('div'); bar.className = 'cmp-b'; bar.style.width = Math.max(1, Math.abs(i.v) / max * 100) + '%'; bar.style.background = i.c;
+      t.appendChild(bar);
+      row.append(hd, s, t);
+      return row;
+    }));
+  }
+
+  function drawLoyers(el) {
+    const ys = RENT.years, H = 270, mt = 14, mb = 30;
+    const { svg, W } = mkSvg(el, H, 'Loyers par année : perçus, estimés et projetés');
+    const y = d3.scaleLinear([0, d3.max(ys, (d) => d.total) || 1], [H - mb, mt]).nice();
+    const yt = y.ticks(5);
+    const ml = measure(svg, yt.map(kE)) + 12;
+    const x = d3.scaleBand(ys.map((d) => d.annee), [ml, W - 8]).padding(0.25);
+    yt.forEach((t) => {
+      svgEl('line', { x1: ml, x2: W - 8, y1: y(t), y2: y(t), stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }, svg);
+      tx(svg, { x: ml - 6, y: y(t), 'text-anchor': 'end', 'dominant-baseline': 'middle', class: 'tick' }, kE(t));
+    });
+    const step = Math.max(1, Math.ceil((measure(svg, ['2026']) + 8) / x.step()));
+    const tip = mkTip(el);
+    ys.forEach((d, i) => {
+      let acc = 0;
+      for (const [v, c] of [[d.saisi, 'var(--s1)'], [d.estime, 'var(--s3)'], [d.projete, 'var(--s2)']]) {
+        if (v <= 0) continue;
+        fillBar(svgEl('rect', { x: x(d.annee), y: y(acc + v), width: x.bandwidth(), height: Math.max(0, y(acc) - y(acc + v)), rx: 2 }, svg), c);
+        acc += v;
+      }
+      if (i % step === 0) tx(svg, { x: x(d.annee) + x.bandwidth() / 2, y: H - 8, 'text-anchor': 'middle', class: 'tick' }, String(d.annee));
+      const hit = svgEl('rect', { x: x(d.annee), y: mt, width: x.bandwidth(), height: H - mb - mt, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', (e) => {
+        const q = pt(svg, e, W);
+        tip.show(String(d.annee), [d.saisi && { c: 'var(--s1)', k: 'Perçu', v: fmt('eur', d.saisi) }, d.estime && { c: 'var(--s3)', k: 'Estimé', v: fmt('eur', d.estime) }, d.projete && { c: 'var(--s2)', k: 'Projeté', v: fmt('eur', d.projete) }, { k: 'Total', v: fmt('eur', d.total) }].filter(Boolean), q.cx, q.cy);
+      });
+      hit.addEventListener('pointerleave', tip.hide);
+    });
+  }
+  function renderLoyers() {
+    if (!RENT || $('#v-loyers').hidden) return;
+    if ($('#c-loyers').clientWidth) drawLoyers($('#c-loyers'));
+    const table = document.createElement('table'); table.className = 'ro';
+    const hr = table.createTHead().insertRow();
+    for (const [t, n] of [['Année'], ['Origine'], ['Loyers de l’année', 1], ['Par mois', 1]]) { const th = document.createElement('th'); th.textContent = t; if (n) th.className = 'n'; hr.appendChild(th); }
+    const tb = table.createTBody();
+    for (const d of RENT.years) {
+      const o = d.annee < RENT.vy || (d.annee === RENT.vy && !d.projete) ? (d.exists ? 'Perçu' : 'Estimé') : d.annee === RENT.vy ? (d.exists ? 'Perçu puis projeté' : 'Estimé puis projeté') : 'Projeté';
+      const tr = tb.insertRow();
+      tr.insertCell().textContent = String(d.annee);
+      tr.insertCell().textContent = o; tr.cells[1].className = 'o';
+      const a = tr.insertCell(); a.className = 'n'; a.textContent = EUR.format(d.total);
+      const b = tr.insertCell(); b.className = 'n'; b.textContent = d.mois > 0.5 ? EUR.format(d.total / d.mois) : '—';
+    }
+    $('#t-recap').replaceChildren(table);
+  }
+
+  /* ---------- rendu de l'analyse ---------- */
+  const FISCAL = [['Prix de vente', 'prix_vente'], ['Frais de vente', 'frais_vente'], ['Coût d’acquisition immobilisé (prix, frais, travaux)', 'cout_capitalise'], ['Amortissements cumulés', 'amort_cumules'], ['Valeur nette comptable', 'vnc'], ['Plus-value professionnelle', 'pv_brute', 1], ['Résultat courant de l’année de vente', 'resultat_courant'], ['Impôt sur les sociétés', 'impot_is'], ['Net disponible dans la SCI', 'net_sci', 1], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Impôt sur la distribution (taxe forfaitaire sur le boni)', 'impot_distrib'], ['Net en poche pour les associés', 'net_vente', 1]];
+  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
+  const buildDl = (id, spec) => {
+    const dl = $(id);
+    for (const [lab, k, tot] of spec) {
+      const dt = document.createElement('dt'); dt.textContent = lab;
+      const dd = document.createElement('dd'); dd.dataset.k = k; dd.dataset.f = 'eur'; dd.textContent = '—';
+      if (tot) { dt.className = 'tot'; dd.className = 'tot'; }
+      dl.append(dt, dd);
+    }
+  };
+
+  function renderValues() {
+    const r = cur();
+    $$('[data-k]').forEach((e) => { e.textContent = r ? fmt(e.dataset.f, r[e.dataset.k]) : '—'; });
+    if (!r) return null;
+    $('#v-sell').hidden = !(r.revenu_alt > r.revenu_conserver);
+    $('#v-keep').hidden = r.revenu_alt > r.revenu_conserver;
+    $('#al-tres').hidden = !(r.tresorerie < 0);
+    return r;
+  }
+  function renderCharts() {
+    const r = cur();
+    if (!r || $('#v-analyse').hidden) return;
+    if ($('#c-bridge').clientWidth) drawBridge($('#c-bridge'), r);
+    if ($('#c-curve').clientWidth) drawCurve($('#c-curve'));
+    if ($('#c-years').clientWidth) drawYears($('#c-years'));
+    drawCompare($('#c-cmp'), r);
+  }
+  function renderAnalyse() { renderValues(); renderCharts(); }
+
+  /* ---------- stockage ---------- */
+  const saveEl = $('#save');
+  const setSave = (state, text) => { saveEl.dataset.state = state; saveEl.textContent = text; };
+  const chains = {};
+  const queue = (key, fn) => {
+    chains[key] = (chains[key] || Promise.resolve()).then(fn).then(() => setSave('ok', 'Enregistré'), (e) => setSave('err', e && e.code === '42501' ? 'Modification refusée : droits insuffisants' : 'Enregistrement impossible'));
+    return chains[key];
+  };
+  let localId = 0;
+  const store = {
+    add(col, row) {
+      if (S.db) { setSave('idle', 'Enregistrement…'); return queue(col, () => S.db.add(col, row)); }
+      S[col].push({ id: 'l' + (++localId), ...row }); onChange(col);
+    },
+    update(col, id, patch) {
+      if (S.db) { setSave('idle', 'Enregistrement…'); return queue(col + '/' + id, () => S.db.update(col, id, patch)); }
+      Object.assign(S[col].find((r) => r.id === id) || {}, patch); onChange(col);
+    },
+    remove(col, id) {
+      if (S.db) { setSave('idle', 'Enregistrement…'); return queue(col + '/' + id, () => S.db.remove(col, id)); }
+      S[col] = S[col].filter((r) => r.id !== id); onChange(col);
+    },
+  };
+  let hypTimer = null, hypBusy = false;
+  const saveHyp = () => {
+    clearTimeout(hypTimer);
+    hypBusy = true;
+    hypTimer = setTimeout(() => {
+      if (!S.db) { hypBusy = false; return; }
+      setSave('idle', 'Enregistrement…');
+      queue('hypotheses', () => S.db.saveHyp({ ...S.hyp })).finally(() => { hypBusy = false; });
+    }, 500);
+  };
+
+  /* ---------- tableaux de saisie ---------- */
+  const pending = {};
+  function renderTable(name) {
+    const cfg = TABLES[name], host = $('#t-' + name);
+    if (host.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName)) { pending[name] = true; return; }
+    pending[name] = false;
+    const rows = [...S[name]].sort((a, b) => ((a[cfg.sort] || '') < (b[cfg.sort] || '') ? -1 : 1));
+    const table = document.createElement('table'); table.className = 'ed';
+    const thead = table.createTHead().insertRow();
+    for (const c of cfg.cols) { const th = document.createElement('th'); th.textContent = c[1]; thead.appendChild(th); }
+    if (cfg.stat) thead.appendChild(document.createElement('th')).textContent = 'Statut';
+    thead.appendChild(document.createElement('th'));
+    const tb = table.createTBody();
+    for (const r of rows) {
+      const tr = tb.insertRow(); tr.dataset.id = r.id;
+      for (const [k, , type, opts] of cfg.cols) {
+        const td = tr.insertCell();
+        let inp;
+        if (type === 'select') {
+          inp = document.createElement('select');
+          for (const [v, l] of opts) inp.add(new Option(l, v));
+        } else { inp = document.createElement('input'); inp.type = type; if (type === 'number') inp.step = 'any'; if (type === 'text') inp.placeholder = 'Description'; }
+        inp.value = r[k] ?? '';
+        inp.dataset.k = k;
+        inp.id = `f-${name}-${r.id}-${k}`;
+        inp.setAttribute('aria-label', cfg.cols.find((c) => c[0] === k)[1]);
+        inp.disabled = !S.canWrite;
+        td.appendChild(inp);
+      }
+      if (cfg.stat) { const td = tr.insertCell(); td.className = 'stat'; td.textContent = cfg.stat(r); }
+      const ta = tr.insertCell(); ta.className = 'act';
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Supprimer cette ligne'); del.disabled = !S.canWrite;
+      ta.appendChild(del);
+    }
+    const foot = document.createElement('div'); foot.className = 'tfoot';
+    const figs = tableTotals(name);
+    for (const [l, v] of figs) { const f = document.createElement('div'); f.className = 'fig'; const a = document.createElement('span'); a.textContent = l; const b = document.createElement('span'); b.textContent = EUR.format(v); f.append(a, b); foot.appendChild(f); }
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'btn primary'; add.textContent = '+ ' + cfg.add; add.disabled = !S.canWrite; add.dataset.add = name;
+    if (cfg.extra) { const ex = document.createElement('button'); ex.type = 'button'; ex.className = 'btn'; ex.textContent = cfg.extra[0]; ex.disabled = !S.canWrite; ex.dataset.extra = name; ex.style.marginLeft = 'auto'; add.style.marginLeft = '0'; foot.appendChild(ex); }
+    foot.appendChild(add);
+    const kids = [];
+    if (rows.length) { kids.push(table); } else { const e = document.createElement('div'); e.className = 'empty'; e.textContent = cfg.empty; kids.push(e); }
+    kids.push(foot);
+    host.replaceChildren(...kids);
+  }
+  function tableTotals(name) {
+    const ref = S.hyp.date_vente_ref;
+    const n = (v) => Number(v) || 0;
+    if (name === 'travaux') return [['Réalisés', S.travaux.filter((t) => t.date <= ref).reduce((a, t) => a + n(t.montant), 0)], ['Prévus', S.travaux.filter((t) => t.date > ref).reduce((a, t) => a + n(t.montant), 0)]];
+    if (name === 'loyers') return [['Perçus (années saisies)', RENT.years.reduce((a, y) => a + y.saisi, 0)], ['Estimés (années non saisies)', RENT.years.reduce((a, y) => a + y.estime, 0)], ['Total depuis l’achat', RENT.past]];
+    if (name === 'projection') return [['Loyer mensuel à la référence', RENT.rate[0]], ['Loyer mensuel dans 12 mois', RENT.rate[12]], ['Loyers des 12 mois suivants', RENT.fwd(0)]];
+    if (name === 'versements') return [['Total versé', S.versements.reduce((a, v) => a + n(v.montant), 0)]];
+    const act = S.charges.filter((c) => c.debut <= ref && (!c.fin || c.fin >= ref));
+    const by = (cat) => act.filter((c) => c.categorie === cat).reduce((a, c) => a + n(c.montant), 0);
+    return [['Copropriété par an', by('copro')], ['Comptable par an', by('comptable')], ['Taxe foncière par an', by('taxe_fonciere')], ['Total en cours par an', act.reduce((a, c) => a + n(c.montant), 0)]];
+  }
+  function wireTable(name) {
+    const host = $('#t-' + name), cfg = TABLES[name];
+    host.addEventListener('change', (e) => {
+      const inp = e.target.closest('[data-k]'), tr = e.target.closest('tr');
+      if (!inp || !tr) return;
+      const type = cfg.cols.find((c) => c[0] === inp.dataset.k)[2];
+      const val = type === 'number' ? (Number(inp.value) || 0) : inp.value.trim();
+      store.update(name, tr.dataset.id, { [inp.dataset.k]: val });
+      const row = S[name].find((r) => r.id === tr.dataset.id); if (row && S.db) row[inp.dataset.k] = val;
+      onChange(name, true);
+    });
+    host.addEventListener('focusout', () => setTimeout(() => { if (pending[name] && !host.contains(document.activeElement)) renderTable(name); }, 0));
+    host.addEventListener('click', (e) => {
+      const add = e.target.closest('[data-add]'), del = e.target.closest('.del'), ex = e.target.closest('[data-extra]');
+      if (ex) cfg.extra[1]();
+      if (add) store.add(name, cfg.blank());
+      if (del) store.remove(name, del.closest('tr').dataset.id);
+    });
+  }
+
+  /* ---------- hypothèses ---------- */
+  function buildHyp() {
+    const host = $('#hyp');
+    for (const [title, fields] of HYP_GROUPS) {
+      const g = document.createElement('div');
+      const h3 = document.createElement('h3'); h3.textContent = title; g.appendChild(h3);
+      for (const [k, label, unit] of fields) {
+        const f = document.createElement('div'); f.className = 'field';
+        const l = document.createElement('label'); l.htmlFor = 'h-' + k; l.textContent = label + (unit !== 'date' ? ` (${unit})` : '');
+        const i = document.createElement('input'); i.id = 'h-' + k; i.dataset.k = k;
+        i.type = unit === 'date' ? 'date' : 'number'; if (i.type === 'number') i.step = 'any';
+        f.append(l, i); g.appendChild(f);
+      }
+      host.appendChild(g);
+    }
+    host.addEventListener('input', (e) => {
+      const i = e.target.closest('input[data-k]'); if (!i) return;
+      S.hyp[i.dataset.k] = i.type === 'number' ? (i.value === '' ? 0 : Number(i.value)) : i.value;
+      onChange('hyp');
+      saveHyp();
+    });
+  }
+  function fillHyp() {
+    $$('#hyp input').forEach((i) => { if (document.activeElement !== i) i.value = S.hyp[i.dataset.k] ?? ''; i.disabled = !S.canWrite; });
+  }
+
+  /* ---------- orchestration ---------- */
+  function onChange(src, quiet) {
+    compute();
+    if (src !== 'hyp') { /* tableaux dépendant de la date de référence */ }
+    if (!quiet || src) { for (const n in TABLES) if (n === src || src === 'hyp') renderTable(n); }
+    renderAnalyse();
+    renderLoyers();
+  }
+  function showView(v) {
+    $$('main > section').forEach((s) => { s.hidden = s.dataset.view !== v; });
+    $$('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.view === v)));
+    if (v === 'analyse') renderCharts();
+    if (v === 'loyers') renderLoyers();
+  }
+
+  /* ---------- Supabase ---------- */
+  const supaBackend = (client, onErr) => {
+    const fromDb = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === null ? '' : v]));
+    const toDb = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === '' ? null : v]));
+    const ok = ({ error }) => { if (error) throw error; };
+    const touched = ({ data, error }) => { if (error) throw error; if (!data || !data.length) throw { code: '42501' }; };
+    const subs = {};
+    const load = async (name) => { const { data, error } = await client.from(name).select('*'); if (error) throw error; return data.map(fromDb); };
+    const refresh = async (name) => { try { const rows = await load(name); (subs[name] || []).forEach((cb) => cb(rows)); } catch (e) { onErr(e); } };
+    const loadHyp = async () => { const { data, error } = await client.from('hypotheses').select('data').eq('id', 1).maybeSingle(); if (error) throw error; return data ? data.data : null; };
+    const refreshHyp = async () => { try { const d = await loadHyp(); (subs.hypotheses || []).forEach((cb) => cb(d)); } catch (e) { onErr(e); } };
+    let channel = null;
+    return {
+      load,
+      async add(col, row) { ok(await client.from(col).insert(toDb(row))); await refresh(col); },
+      async update(col, id, patch) { touched(await client.from(col).update(toDb(patch)).eq('id', id).select('id')); await refresh(col); },
+      async remove(col, id) { touched(await client.from(col).delete().eq('id', id).select('id')); await refresh(col); },
+      async saveHyp(data) { ok(await client.from('hypotheses').upsert({ id: 1, data })); },
+      watch(name, cb) { (subs[name] = subs[name] || []).push(cb); refresh(name); },
+      watchHyp(cb) { (subs.hypotheses = subs.hypotheses || []).push(cb); refreshHyp(); },
+      listen() {
+        channel = client.channel('gestion-immo').on('postgres_changes', { event: '*', schema: 'public' }, (p) => { if (p.table === 'hypotheses') refreshHyp(); else if (subs[p.table]) refresh(p.table); }).subscribe();
+      },
+      close() { if (channel) client.removeChannel(channel); },
+    };
+  };
+
+  const authEl = $('#auth'), authMsg = $('#auth-msg');
+  const showAuth = (msg, denied) => {
+    authEl.hidden = false;
+    authMsg.textContent = msg || '';
+    $('#auth-send').hidden = !!denied; $('#auth-mail').hidden = !!denied; $('label[for=auth-mail]').hidden = !!denied; $('#auth-intro').hidden = !!denied;
+    $('#auth-out').hidden = !denied;
+    $('#who').hidden = true; $('#logout').hidden = true;
+  };
+  let client = null, started = null;
+  const resetApp = () => {
+    if (S.db) S.db.close();
+    S.db = null; started = null; S.canWrite = true;
+    S.hyp = { ...DEFAULT_HYP }; S.echeancier = [];
+    for (const n of Object.keys(TABLES)) S[n] = [];
+    fillHyp(); onChange('hyp');
+  };
+  async function startSession(session) {
+    if (started === session.user.id) return;
+    started = session.user.id;
+    const { data: m, error } = await client.from('membres').select('role').maybeSingle();
+    if (error || !m) { showAuth(`Accès refusé pour ${session.user.email}. Demande à un éditeur d’ajouter cette adresse à la liste des membres.`, true); return; }
+    S.canWrite = m.role === 'editeur';
+    const onErr = () => setSave('err', 'Connexion au stockage interrompue');
+    const db = supaBackend(client, onErr);
+    S.db = db;
+    authEl.hidden = true;
+    $('#who').textContent = session.user.email; $('#who').hidden = false; $('#logout').hidden = false;
+    try { S.echeancier = await db.load('echeancier'); } catch (e) { onErr(); }
+    setSave(S.canWrite ? 'ok' : 'idle', S.canWrite ? 'Enregistré' : 'Lecture seule');
+    db.watchHyp((data) => {
+      if (hypBusy) return;
+      S.hyp = { ...DEFAULT_HYP, ...(data || {}) };
+      fillHyp(); onChange('hyp');
+    });
+    for (const name of Object.keys(TABLES)) db.watch(name, (rows) => { S[name] = rows; onChange(name); });
+    db.listen();
+  }
+  function connect() {
+    const cfg = window.APP_CONFIG || {};
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || !window.supabase) { setSave('err', 'Supabase non configuré : les modifications ne sont pas conservées'); return; }
+    client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+    client.auth.onAuthStateChange((event, session) => {
+      setTimeout(() => { if (session) startSession(session); else { resetApp(); showAuth(''); } }, 0);
+    });
+    $('#auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      authMsg.textContent = 'Envoi du lien…';
+      const { error } = await client.auth.signInWithOtp({ email: $('#auth-mail').value.trim(), options: { emailRedirectTo: location.origin + location.pathname } });
+      authMsg.textContent = error ? 'Envoi impossible : ' + error.message : 'Lien envoyé. Ouvre l’e-mail reçu sur cet appareil.';
+    });
+    const out = () => client.auth.signOut();
+    $('#logout').addEventListener('click', out); $('#auth-out').addEventListener('click', out);
+  }
+
+  /* ---------- démarrage ---------- */
+  buildDl('#dl-fiscal', FISCAL); buildDl('#dl-bilan', BILAN); buildHyp();
+  for (const n in TABLES) wireTable(n);
+  $$('.tab').forEach((t) => t.addEventListener('click', () => { showView(t.dataset.view); try { history.replaceState(null, '', '#' + t.dataset.view); } catch (e) { /* ignoré */ } }));
+  $('#r-pas').addEventListener('input', (e) => { sel.pas = Number(e.target.value); renderAnalyse(); });
+  $('#r-h').addEventListener('input', (e) => { sel.h = Number(e.target.value); renderAnalyse(); });
+  $('#reset').addEventListener('click', () => { sel.h = 0; sel.pas = 0; $('#r-pas').value = 0; $('#r-h').value = 0; renderAnalyse(); });
+  let rz = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); }); }).observe($('#v-analyse'));
+  new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { renderCharts(); renderLoyers(); }); }).observe($('#v-loyers'));
+  compute(); fillHyp();
+  for (const n in TABLES) renderTable(n);
+  const start = location.hash.slice(1);
+  showView(['analyse', 'travaux', 'charges', 'loyers', 'versements', 'hypotheses'].includes(start) ? start : 'analyse');
+  renderAnalyse();
+  renderLoyers();
+  connect();
+})();
+</script>
+</body>
+</html>
