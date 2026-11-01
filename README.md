@@ -1,4 +1,4 @@
-# Vente du local
+# Local - Radinghem
 
 Tableau de bord pour décider de la vente d'un local commercial détenu par une SCI à l'IS : plus-value, impôts, remboursement anticipé du prêt, travaux, charges, loyers et versements des associés.
 
