@@ -196,7 +196,7 @@
       <div class="tile"><div class="l">Plus-value professionnelle</div><b class="v" data-k="pv_brute" data-f="eur">—</b><div class="s">prix de vente − valeur nette comptable</div></div>
       <div class="tile"><div class="l">Impôt sur les sociétés</div><b class="v" data-k="impot_is" data-f="eur">—</b><div class="s">sur la plus-value, après amortissements</div></div>
       <div class="tile"><div class="l">Impôt sur la distribution</div><b class="v" data-k="impot_distrib" data-f="eur">—</b><div class="s">taxe forfaitaire sur le boni de liquidation</div></div>
-      <div class="tile"><div class="l">Frais de remboursement anticipé</div><b class="v" data-k="ira" data-f="eur">—</b><div class="s">plafonnés par le contrat</div></div>
+      <div class="tile"><div class="l">Frais de remboursement anticipé</div><b class="v" data-k="ira" data-f="eur">—</b><div class="s">pourcentage du capital remboursé, déductible du résultat</div></div>
       <div class="tile"><div class="l">Gain total depuis l’achat</div><b class="v" data-k="gain_total" data-f="eur">—</b><div class="s">net en poche − apport − versements</div></div>
     </div>
 
@@ -318,13 +318,13 @@
   const today0 = () => new Date().toISOString().slice(0, 10);
   const DEFAULT_HYP = {
     date_achat: '2020-01-01', prix_achat: 0, frais_notaire: 0, frais_agence_achat: 0,
-    emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, pret_premiere_echeance: '', pret_differe_debut: '', pret_differe_mois: 0, pret_differe_mensualite: 0, ira_plafond_pct: 3, ira_mois: 6,
+    emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, pret_premiere_echeance: '', pret_differe_debut: '', pret_differe_mois: 0, pret_differe_mensualite: 0, ira_pct: 8,
     loyer_mensuel: 0, indexation_loyer_pct: 0, date_vente_ref: today0(), prix_vente_vise: 0, revalo_annuelle_pct: 1, frais_diagnostics: 0,
     part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, pfu_pct: 30, rendement_alternatif_pct: 3, tresorerie_depart: 0, tresorerie_min: 0, solde_banque: 0, date_solde: '',
   };
   const HYP_GROUPS = [
     ['Achat', [['date_achat', 'Date d’achat', 'date'], ['prix_achat', 'Prix d’achat (net vendeur)', '€'], ['frais_notaire', 'Frais d’acte d’achat et de prêt', '€'], ['frais_agence_achat', 'Frais d’agence à l’achat', '€']]],
-    ['Prêt', [['emprunt', 'Capital emprunté', '€'], ['taux_pret_pct', 'Taux d’intérêt en cours', '%'], ['assurance_mensuelle', 'Assurance emprunteur par mois', '€'], ['pret_premiere_echeance', 'Première échéance du prêt', 'date'], ['pret_differe_debut', 'Début du différé (intérêts seuls)', 'date'], ['pret_differe_mois', 'Durée du différé', 'mois'], ['pret_differe_mensualite', 'Mensualité pendant le différé (0 : estimée)', '€'], ['ira_plafond_pct', 'Indemnité : plafond en % du capital dû', '%'], ['ira_mois', 'Indemnité : plafond en mois d’intérêts', 'mois']]],
+    ['Prêt', [['emprunt', 'Capital emprunté', '€'], ['taux_pret_pct', 'Taux d’intérêt en cours', '%'], ['assurance_mensuelle', 'Assurance emprunteur par mois', '€'], ['pret_premiere_echeance', 'Première échéance du prêt', 'date'], ['pret_differe_debut', 'Début du différé (intérêts seuls)', 'date'], ['pret_differe_mois', 'Durée du différé', 'mois'], ['pret_differe_mensualite', 'Mensualité pendant le différé (0 : estimée)', '€'], ['ira_pct', 'Indemnité de remboursement anticipé (% du capital remboursé, contrat)', '%']]],
     ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, futur sans année prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
     ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé, net vendeur', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_diagnostics', 'Frais à la charge du vendeur (diagnostics, mainlevée, divers ; l’agence est payée par l’acheteur)', '€']]],
     ['Trésorerie', [['tresorerie_depart', 'Trésorerie de départ à l’achat (apport en plus du prix et des frais)', '€'], ['tresorerie_min', 'Seuil de trésorerie à maintenir', '€'], ['solde_banque', 'Solde bancaire constaté', '€'], ['date_solde', 'Date du solde constaté (vide : estimation seule)', 'date']]],
@@ -647,8 +647,8 @@
         const vnc = capitalise - amort;
         const pvb = prix - fraisVente - vnc;
         const courant = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100 - h.assurance_mensuelle * 12 - amortBienAn - amWAn - chargeVente;
-        const impotIs = Math.max(0, IS(pvb + courant) - IS(courant));
-        const ira = Math.min(crd * h.ira_plafond_pct / 100, crd * h.taux_pret_pct / 100 * h.ira_mois / 12);
+        const ira = crd * h.ira_pct / 100;
+        const impotIs = Math.max(0, IS(pvb + courant - ira) - IS(courant));
         const netSci = prix - fraisVente - crd - ira - impotIs;
         const loyers = L.past + L.cum[12 * hz];
         const mensualites = loanPast(h, ECH.map((e) => ({ i: mIdx(e.date), v: e.echeance }))).total + payes.reduce((t, e) => t + e.echeance, 0);
@@ -847,6 +847,11 @@
       { n: 'Vendre et placer le net', s: `Net en poche placé à ${fmtPct(alt, 2)}`, v: r.revenu_alt, c: 'var(--s2)' },
     ];
     const max = Math.max(1, ...items.map((i) => Math.abs(i.v)));
+    const eq = document.createElement('div'); eq.className = 'cmp-s';
+    const be = r.net_vente > 0 ? r.revenu_conserver / r.net_vente * 100 : null;
+    eq.append('Pour égaler la location, le net en poche (', document.createTextNode(fmt('eur', r.net_vente)), ') devrait rapporter ');
+    const strong = document.createElement('b'); strong.textContent = be === null ? 'un rendement non calculable' : fmtPct(be, 2) + ' par an'; eq.append(strong);
+    if (be !== null) eq.append(be > alt ? `, soit ${fmtPct(be - alt, 2)} de plus que les ${fmtPct(alt, 2)} supposés.` : `, soit ${fmtPct(alt - be, 2)} de moins que les ${fmtPct(alt, 2)} supposés.`);
     el.replaceChildren(...items.map((i) => {
       const row = document.createElement('div');
       const hd = document.createElement('div'); hd.className = 'cmp-h';
@@ -859,7 +864,7 @@
       t.appendChild(bar);
       row.append(hd, s, t);
       return row;
-    }));
+    }), eq);
   }
 
   function drawLoyers(el) {
