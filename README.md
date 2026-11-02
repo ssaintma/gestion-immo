@@ -4,6 +4,8 @@ Tableau de bord pour décider de la vente d'un local commercial détenu par une 
 
 Page statique (HTML + JavaScript, sans étape de build). Les données sont dans Supabase, derrière une connexion par lien e-mail.
 
+**Application : https://ssaintma.github.io/gestion-immo/**
+
 ```
 site/index.html     la page (calculs, graphiques, tableaux de saisie)
 site/config.js      URL du projet Supabase et clé « anon »
