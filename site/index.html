@@ -277,8 +277,8 @@
       <p class="note">Solde en fin de mois, local conservé, à partir de la trésorerie de départ (hypothèses). Loyers : saisis ou estimés par année, répartis sur les mois, puis prévus. Charges : selon leur calendrier de paiement (mensuel, trimestriel ou annuel). Prêt : échéancier réel à partir de novembre 2026, mensualités passées reconstituées à partir de la première échéance et du différé de 2020. Les versements, travaux et dépôts de garantie sont placés à leur date. L’impôt sur les sociétés est celui que tu saisis pour chaque exercice, sinon estimé sur le résultat de l’année civile (loyers, charges, intérêts, assurance, amortissements), et payé en mai de l’année suivante, avec des acomptes trimestriels quand l’IS précédent dépasse 3 000 €. Pour caler la courbe sur la banque, renseigne le solde constaté dans les hypothèses.</p>
       <div class="chart" id="c-treso"></div>
       <div class="leg"><span><i style="background:var(--s1)"></i>Solde</span><span><i style="background:var(--s3)"></i>Versement</span><span><i style="background:var(--soft);border:1px solid var(--line)"></i>Projeté</span><span><i style="background:var(--bad)"></i>Solde négatif</span></div></section>
-    <section class="card"><h2>IS de chaque exercice</h2>
-      <p class="note">Montant d’impôt sur les sociétés de l’exercice (année civile), tel qu’indiqué sur l’avis ou la liasse. Une année saisie remplace l’estimation, une année vide garde l’estimation, qui sert pour la projection. Le décaissement est placé en mai de l’année suivante.</p>
+    <section class="card"><h2>IS et CRL de chaque exercice</h2>
+      <p class="note">Montant d’impôt sur les sociétés et de CRL de l’exercice (année civile), tel que payé ou indiqué sur l’avis ou la liasse. Une année saisie remplace l’estimation, une année vide garde l’estimation, qui sert pour la projection. Le décaissement est placé en mai de l’année suivante.</p>
       <div class="tablewrap" id="t-impots"></div></section>
     <section class="card"><h2>Mois à venir</h2>
       <p class="note">À partir du mois en cours. Les soldes sous le seuil sont en rouge.</p>
@@ -320,7 +320,7 @@
     date_achat: '2020-01-01', prix_achat: 0, frais_notaire: 0, frais_agence_achat: 0,
     emprunt: 0, taux_pret_pct: 0, assurance_mensuelle: 0, pret_premiere_echeance: '', pret_differe_debut: '', pret_differe_mois: 0, pret_differe_mensualite: 0, ira_pct: 8,
     loyer_mensuel: 0, indexation_loyer_pct: 0, date_vente_ref: today0(), prix_vente_vise: 0, revalo_annuelle_pct: 1, frais_diagnostics: 0,
-    part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, pfu_pct: 30, rendement_alternatif_pct: 3, tresorerie_depart: 0, tresorerie_min: 0, solde_banque: 0, date_solde: '',
+    part_terrain_pct: 15, amort_taux_pct: 4, is_taux_reduit_pct: 15, is_plafond_reduit: 42500, is_taux_normal_pct: 25, crl_pct: 2.5, pfu_pct: 30, rendement_alternatif_pct: 3, tresorerie_depart: 0, tresorerie_min: 0, solde_banque: 0, date_solde: '',
   };
   const HYP_GROUPS = [
     ['Achat', [['date_achat', 'Date d’achat', 'date'], ['prix_achat', 'Prix d’achat (net vendeur)', '€'], ['frais_notaire', 'Frais d’acte d’achat et de prêt', '€'], ['frais_agence_achat', 'Frais d’agence à l’achat', '€']]],
@@ -328,7 +328,7 @@
     ['Exploitation', [['loyer_mensuel', 'Loyer mensuel de base, sans TVA (années non saisies, futur sans année prévue)', '€'], ['indexation_loyer_pct', 'Indexation annuelle du loyer prévu', '%']]],
     ['Vente', [['date_vente_ref', 'Date de vente de référence', 'date'], ['prix_vente_vise', 'Prix de vente visé, net vendeur', '€'], ['revalo_annuelle_pct', 'Valorisation annuelle supposée', '%'], ['frais_diagnostics', 'Frais à la charge du vendeur (diagnostics, mainlevée, divers ; l’agence est payée par l’acheteur)', '€']]],
     ['Trésorerie', [['tresorerie_depart', 'Trésorerie de départ à l’achat (apport en plus du prix et des frais)', '€'], ['tresorerie_min', 'Seuil de trésorerie à maintenir', '€'], ['solde_banque', 'Solde bancaire constaté', '€'], ['date_solde', 'Date du solde constaté (vide : estimation seule)', 'date']]],
-    ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable (sans composants saisis)', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel (travaux immobilisés, ou sans composants)', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
+    ['Fiscalité et alternative', [['part_terrain_pct', 'Part du terrain, non amortissable (sans composants saisis)', '%'], ['amort_taux_pct', 'Taux d’amortissement annuel (travaux immobilisés, ou sans composants)', '%'], ['is_taux_reduit_pct', 'IS : taux réduit', '%'], ['is_plafond_reduit', 'IS : plafond du taux réduit', '€'], ['is_taux_normal_pct', 'IS : taux normal', '%'], ['crl_pct', 'CRL : contribution sur les revenus locatifs (% des loyers perçus, payée avec l’IS)', '%'], ['pfu_pct', 'Taxe forfaitaire sur la distribution', '%'], ['rendement_alternatif_pct', 'Rendement du placement alternatif', '%']]],
   ];
   const today = () => new Date().toISOString().slice(0, 10);
   const MOIS_OPTS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, k) => [k + 1, m]);
@@ -372,7 +372,7 @@
       stat: (r) => (Number(r.montant) < 0 ? 'Restitué' : 'Reçu'),
     },
     impots: {
-      cols: [['annee', 'Exercice', 'number'], ['montant', 'IS de l’exercice (€)', 'number'], ['libelle', 'Commentaire', 'text']],
+      cols: [['annee', 'Exercice', 'number'], ['montant', 'IS et CRL de l’exercice (€)', 'number'], ['libelle', 'Commentaire', 'text']],
       blank: () => { const y = Math.max(Number(S.hyp.date_achat.slice(0, 4)) - 1, ...S.impots.map((r) => Number(r.annee) || 0)) + 1, e = ISMODEL && ISMODEL.years.find((q) => q.annee === y); return { annee: y, montant: e ? Math.round(e.estime) : 0, libelle: '' }; }, sort: 'annee', add: 'Ajouter un exercice',
       stat: (r) => { const e = ISMODEL && ISMODEL.years.find((q) => q.annee === Number(r.annee)); return e ? 'Estimation : ' + EUR.format(e.estime) : ''; },
       empty: 'Aucun montant saisi : l’IS de toutes les années est estimé.',
@@ -536,8 +536,9 @@
     for (const t of S.travaux) if (t.date && t.traitement === 'immobilise') amortir(Number(t.montant) || 0, mIdx(t.date));
     return M;
   }
-  /* IS estimé par exercice (année civile) : résultat = loyers - charges - intérêts - assurance - amortissements - travaux en charge, déficits reportés.
-     Décaissement : solde en mai de l'année suivante ; acomptes trimestriels l'année suivante si l'IS précédent dépasse 3 000 €. */
+  /* IS estimé par exercice (année civile) : résultat = loyers - charges - intérêts - assurance - amortissements - travaux en charge - CRL, déficits reportés.
+     La CRL (% des loyers perçus) est déductible et payée avec l'IS ; un montant saisi couvre IS + CRL.
+     Décaissement : solde en mai de l'année suivante ; acomptes trimestriels (IS seul) l'année suivante si l'IS précédent dépasse 3 000 €. */
   function isModel(h, M) {
     const years = [], pay = new Map(), cum = {};
     const add = (i, v) => pay.set(i, (pay.get(i) || 0) + v);
@@ -546,14 +547,15 @@
     let pool = 0, prev = 0, sum = 0;
     for (let Y = Math.floor(M.first / 12); Y <= Math.floor(M.last / 12); Y++) {
       const tot = (a) => { let t = 0; for (let i = Math.max(Y * 12, M.first); i <= Math.min(Y * 12 + 11, M.last); i++) t += a[i - M.first]; return t; };
-      const result = tot(M.L) - tot(M.C) - tot(M.INT) - tot(M.INS) - tot(M.A) - tot(M.Wc);
+      const crl = tot(M.L) * h.crl_pct / 100;
+      const result = tot(M.L) - tot(M.C) - tot(M.INT) - tot(M.INS) - tot(M.A) - tot(M.Wc) - crl;
       let taxable = 0;
       if (result < 0) pool -= result; else { const use = Math.min(pool, result); pool -= use; taxable = result - use; }
-      const estime = isTax(h, taxable), reel = man.has(Y), is = reel ? man.get(Y) : estime, q = prev > 3000 ? prev / 4 : 0;
+      const impot = isTax(h, taxable), estime = impot + crl, reel = man.has(Y), is = reel ? man.get(Y) : estime, q = prev > 3000 ? prev / 4 : 0;
       for (const m of [2, 5, 8, 11]) add(Y * 12 + m, q);
       add((Y + 1) * 12 + 4, is - 4 * q);
-      cum[Y] = sum; sum += is; prev = is;
-      years.push({ annee: Y, result, taxable, estime, reel, is });
+      cum[Y] = sum; sum += is; prev = reel ? Math.max(0, is - crl) : impot;
+      years.push({ annee: Y, result, taxable, crl, estime, reel, is });
     }
     return { years, pay, cum };
   }
@@ -646,7 +648,7 @@
         const amort = amortBien + amW;
         const vnc = capitalise - amort;
         const pvb = prix - fraisVente - vnc;
-        const courant = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100 - h.assurance_mensuelle * 12 - amortBienAn - amWAn - chargeVente;
+        const courant = L.fwd(hz) * (1 - h.crl_pct / 100) - chargesAn - crd * h.taux_pret_pct / 100 - h.assurance_mensuelle * 12 - amortBienAn - amWAn - chargeVente;
         const ira = crd * h.ira_pct / 100;
         const impotIs = Math.max(0, IS(pvb + courant - ira) - IS(courant));
         const netSci = prix - fraisVente - crd - ira - impotIs;
@@ -656,7 +658,7 @@
         const tres = h.tresorerie_depart + versCum + loyers - chargesCum - mensualites - cashW - isCum + TRESO.off;
         const impotDistrib = Math.max(0, netSci + tres - apport) * h.pfu_pct / 100;
         const net = netSci + tres - impotDistrib;
-        const revenuNet = L.fwd(hz) - chargesAn - crd * h.taux_pret_pct / 100;
+        const revenuNet = L.fwd(hz) * (1 - h.crl_pct / 100) - chargesAn - crd * h.taux_pret_pct / 100;
         const r = Math.round;
         return {
           h: hz, pas, annee_vente: annee, ecart_pct: pas * 2.5, duree,
@@ -996,15 +998,15 @@
     if ($('#c-treso').clientWidth) drawTreso($('#c-treso'));
     const e = (v, neg) => [EUR.format(v || 0), neg];
     const rows = T.months.filter((m) => m.proj).map((m) => [[mLabel(m.i)], e(m.loyers), e(-m.charges), e(-m.pret), e(-m.travaux), e(-m.is), e(m.depots), e(m.versements), e(m.bal, m.bal < T.seuil)]);
-    $('#t-treso').replaceChildren(roTable(['Mois', 'Loyers', 'Charges', 'Prêt', 'Travaux', 'IS', 'Dépôts', 'Versements', 'Solde fin de mois'], rows));
+    $('#t-treso').replaceChildren(roTable(['Mois', 'Loyers', 'Charges', 'Prêt', 'Travaux', 'IS et CRL', 'Dépôts', 'Versements', 'Solde fin de mois'], rows));
     const by = new Map();
     for (const m of T.months) { const y = Math.floor(m.i / 12); const a = by.get(y) || { loyers: 0, charges: 0, pret: 0, travaux: 0, is: 0, depots: 0, versements: 0, bal: 0 }; for (const k of ['loyers', 'charges', 'pret', 'travaux', 'is', 'depots', 'versements']) a[k] += m[k]; a.bal = m.bal; by.set(y, a); }
-    $('#t-treso-an').replaceChildren(roTable(['Année', 'Loyers', 'Charges', 'Prêt', 'Travaux', 'IS', 'Dépôts', 'Versements', 'Solde fin d’année'], [...by].map(([y, a]) => [[String(y)], e(a.loyers), e(-a.charges), e(-a.pret), e(-a.travaux), e(-a.is), e(a.depots), e(a.versements), e(a.bal, a.bal < T.seuil)])));
+    $('#t-treso-an').replaceChildren(roTable(['Année', 'Loyers', 'Charges', 'Prêt', 'Travaux', 'IS et CRL', 'Dépôts', 'Versements', 'Solde fin d’année'], [...by].map(([y, a]) => [[String(y)], e(a.loyers), e(-a.charges), e(-a.pret), e(-a.travaux), e(-a.is), e(a.depots), e(a.versements), e(a.bal, a.bal < T.seuil)])));
   }
 
   /* ---------- rendu de l'analyse ---------- */
   const FISCAL = [['Prix de vente', 'prix_vente'], ['Frais à la charge du vendeur', 'frais_vente'], ['Coût d’acquisition immobilisé (prix, frais, travaux)', 'cout_capitalise'], ['Amortissements cumulés', 'amort_cumules'], ['Valeur nette comptable', 'vnc'], ['Plus-value professionnelle', 'pv_brute', 1], ['Résultat courant de l’année de vente', 'resultat_courant'], ['Impôt sur les sociétés', 'impot_is'], ['Net disponible dans la SCI', 'net_sci', 1], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Impôt sur la distribution (taxe forfaitaire sur le boni)', 'impot_distrib'], ['Net en poche pour les associés', 'net_vente', 1]];
-  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Trésorerie de départ (apport en plus)', 'tresorerie_depart'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['IS payé sur les loyers (estimé)', 'is_loyers'], ['Écart avec le solde bancaire constaté', 'ajust_solde'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
+  const BILAN = [['Apport initial des associés (prix et frais, hors prêt)', 'apport_initial'], ['Trésorerie de départ (apport en plus)', 'tresorerie_depart'], ['Versements ultérieurs des associés', 'versements_cumules'], ['Loyers encaissés', 'loyers_cumules'], ['Charges payées', 'charges_cumulees'], ['Mensualités de prêt payées', 'mensualites_cumulees'], ['Travaux payés', 'travaux_payes'], ['IS et CRL payés sur les loyers (estimé)', 'is_loyers'], ['Écart avec le solde bancaire constaté', 'ajust_solde'], ['Trésorerie estimée de la SCI', 'tresorerie'], ['Net en poche à la vente', 'net_vente'], ['Gain total (net en poche − apport − versements)', 'gain_total', 1]];
   const buildDl = (id, spec) => {
     const dl = $(id);
     for (const [lab, k, tot] of spec) {
